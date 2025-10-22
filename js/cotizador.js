@@ -425,9 +425,9 @@ function initCotizador() {
     const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
     // Espacio adicional entre el encabezado de la tabla y las filas de datos.
     const tableBodyExtraSpacing = 3;
-    // Hacer que la primera fila de contenido se posicione como si fuese la cuarta fila
+    // Hacer que la primera fila de contenido se posicione como si fuese la segunda fila
     // real para evitar cualquier superposición con el encabezado.
-    const tableBodySkippedRows = 3;
+    const tableBodySkippedRows = 1;
     // Punto inicial del área utilizable para filas de datos.
     const tableContentTop =
       tableHeaderYPos + tableBodyExtraSpacing + tableBodySkippedRows * rowHeight;
