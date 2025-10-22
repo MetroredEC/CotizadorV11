@@ -419,15 +419,20 @@ function initCotizador() {
     // Primer margen para header y espacio después del header (deja lugar para detalles y encabezado de tabla)
     // Altura aproximada de la cabecera (incluyendo logos y detalles). Para A4 damos más espacio
     const headerYEnd = 70;
+    // Desplazamiento adicional entre la información del header y el encabezado de la tabla.
+    const tableHeaderYOffset = 6;
     // Posición base del encabezado de la tabla en el eje Y.
-    const tableHeaderYPos = headerYEnd;
+    const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
     // Espacio adicional entre el encabezado de la tabla y la primera fila de datos.
     const tableBodyExtraSpacing = 3;
+    // Punto inicial del área utilizable para filas de datos.
+    const tableContentTop = tableHeaderYPos + tableBodyExtraSpacing;
     // Altura del pie de página para número de página y textos legales en A4
     const footerHeight = 20;
-    const availableHeightNoSummary = pageHeight - headerYEnd - footerHeight;
+    const availableHeightNoSummary = pageHeight - tableContentTop - footerHeight;
     const maxRowsNoSummary = Math.floor(availableHeightNoSummary / rowHeight);
-    const availableHeightWithSummary = pageHeight - headerYEnd - footerHeight - resumenHeight;
+    const availableHeightWithSummary =
+      pageHeight - tableContentTop - footerHeight - resumenHeight;
     const maxRowsWithSummary = Math.floor(availableHeightWithSummary / rowHeight);
     // Distribuir filas entre páginas
     const filas = cart.map((it) => it);
@@ -609,7 +614,7 @@ function initCotizador() {
           doc.addPage();
           pageNum++;
           drawHeader();
-          summaryY = headerYEnd + rowHeight + 4;
+          summaryY = tableHeaderYPos + rowHeight + tableBodyExtraSpacing + 4;
         }
         // Construir líneas de resumen: Subtotal, Copago (si aplica) y Total
         const summaryLines = [];
