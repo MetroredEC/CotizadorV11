@@ -37,36 +37,18 @@
       </div>
       <h1>Gestión de tarifarios y sistema</h1>
       <p>
-        Para añadir un tarifario nuevo, asigne un nombre descriptivo, seleccione
-        el archivo Excel (.xlsx) con las columnas <strong>DESCRIPCIÓN, CODIGO,
-        GRUPO, PRECIO</strong> y una columna por aseguradora, y opcionalmente
-        suba un logo (PNG) que se utilizará en el PDF de cotizaciones.
-        Si necesita un ejemplo, descargue la
-        <button type="button" id="downloadTemplateBtn" class="btn btn-small">
-          plantilla de tarifario
-        </button>.
+        Las aseguradoras disponibles en Metrored son fijas. Desde aquí puede subir el
+        archivo Excel (.xlsx) que contiene los valores negociados para cada una. Cada
+        archivo debe incluir las columnas <strong>CODIGO, DESCRIPCIÓN, GRUPO, PRECIO</strong>
+        y una columna <strong>TARIFA</strong> con el valor de la aseguradora. Los exámenes
+        nuevos se añadirán automáticamente al tarifario general.
       </p>
-      <div class="form-group">
-        <label for="tarifarioName">Nombre del tarifario</label>
-        <input type="text" id="tarifarioName" placeholder="Ej.: Tarifario General 2025" />
-      </div>
-      <div class="form-group">
-        <label for="tarifarioFile">Archivo de tarifario (.xlsx)</label>
-        <input type="file" id="tarifarioFile" accept=".xlsx" />
-      </div>
-      <div class="form-group">
-        <label for="logoFile">Logo del seguro (PNG, opcional)</label>
-        <input type="file" id="logoFile" accept=".png" />
-      </div>
-      <button id="addTarifarioBtn" class="btn">Agregar tarifario</button>
-      <p id="uploadMessage" class="message"></p>
-      <hr />
-      <h2>Tarifarios cargados</h2>
-      <p>
-        Los tarifarios cargados se muestran a continuación; puede activar uno para que sea utilizado en el cotizador, eliminar los
-        que estén obsoletos y subir o cambiar el logo asociado a cada uno. El logo se mostrará en el encabezado del PDF.
-      </p>
-      <ul id="tarifariosList"></ul>
+      <button type="button" id="downloadTemplateBtn" class="btn btn-small">
+        Descargar plantilla base
+      </button>
+      <p class="message" id="tarifarioUploadMessage"></p>
+      <h2>Tarifarios por aseguradora</h2>
+      <ul id="insurerTarifarioList" class="tarifario-list"></ul>
       <hr />
       <h2>Logos de aseguradoras</h2>
       <p>

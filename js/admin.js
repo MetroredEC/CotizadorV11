@@ -1,7 +1,6 @@
 // admin.js
 // Lógica de la página de administración de Metrored. Permite gestionar
-// tarifarios (múltiples archivos con nombre y logo), ver logs de
-// cotizaciones, y administrar usuarios.
+// tarifarios por aseguradora, ver logs de cotizaciones y administrar usuarios.
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { username, role } = getSessionUser();
@@ -13,14 +12,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('adminGreeting').textContent = `Hola, ${username}`;
   document.getElementById('adminLogout').addEventListener('click', logout);
 
-  // Asegurar que exista al menos un tarifario por defecto y cargar datos base.
-  await ensureDefaultTarifario();
+  // Cargar tarifario base y preparar las aseguradoras fijas
+  await ensureTarifarioDataset();
 
-  // Renderizar listas iniciales
-  renderTarifariosList();
+  // Renderizar vistas iniciales
   renderUsers();
-  // Cargar logos de aseguradoras (requiere que appState se haya inicializado)
-  await loadTarifario();
+  renderInsurerTariffManager();
   renderInsurerLogos();
 
   // Preparar descarga de logs: se gestiona desde downloadLogBtn
@@ -33,70 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (templateBtn) {
     templateBtn.addEventListener('click', downloadTarifarioTemplate);
   }
-
-  // Evento para agregar un nuevo tarifario
-  document.getElementById('addTarifarioBtn').addEventListener('click', async () => {
-    const nameInput = document.getElementById('tarifarioName');
-    const fileInput = document.getElementById('tarifarioFile');
-    const logoInput = document.getElementById('logoFile');
-    const messageElem = document.getElementById('uploadMessage');
-    messageElem.textContent = '';
-    messageElem.style.color = '';
-    const name = nameInput.value.trim();
-    if (!name) {
-      messageElem.textContent = 'Ingrese un nombre para el tarifario';
-      messageElem.style.color = 'red';
-      return;
-    }
-    const file = fileInput.files[0];
-    if (!file) {
-      messageElem.textContent = 'Seleccione un archivo .xlsx';
-      messageElem.style.color = 'red';
-      return;
-    }
-    try {
-      // Analizar el archivo Excel
-      const data = await parseExcelFile(file);
-      // Convertir logo a DataURL si existe
-      let logoDataUrl = null;
-      const logoFile = logoInput.files[0];
-      if (logoFile) {
-        logoDataUrl = await fileToDataURL(logoFile);
-      }
-      // Obtener lista actual de tarifarios
-      const tarifarios = loadTarifarios();
-      // Añadir nuevo
-      tarifarios.push({ name, data, logo: logoDataUrl });
-      saveTarifarios(tarifarios);
-      // Activar el recién añadido
-      const newIndex = tarifarios.length - 1;
-      setActiveTarifarioIndex(newIndex);
-      // Establecer dataset activo para el cotizador
-      localStorage.setItem('tarifarioData', JSON.stringify(data));
-      // Guardar logo activo
-      if (logoDataUrl) {
-        localStorage.setItem('tarifarioLogo', logoDataUrl);
-      } else {
-        localStorage.removeItem('tarifarioLogo');
-      }
-      // Limpiar campos
-      nameInput.value = '';
-      fileInput.value = '';
-      logoInput.value = '';
-      // Actualizar vista
-      renderTarifariosList();
-      messageElem.textContent = 'Tarifario agregado y activado correctamente';
-      messageElem.style.color = 'green';
-    } catch (error) {
-      console.error(error);
-      if (error.message && error.message.includes('estructura_incorrecta')) {
-        messageElem.textContent = 'Estructura incorrecta: verifique que el archivo tenga las columnas requeridas';
-      } else {
-        messageElem.textContent = 'Error al procesar el archivo';
-      }
-      messageElem.style.color = 'red';
-    }
-  });
 
   // Evento para agregar un usuario nuevo
   document.getElementById('addUserBtn').addEventListener('click', () => {
@@ -230,47 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * Lee la lista de tarifarios del almacenamiento local.
- * @returns {Array}
- */
-function loadTarifarios() {
-  const stored = localStorage.getItem('tarifarios');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      console.error('No se pudo parsear tarifarios de localStorage', e);
-      localStorage.removeItem('tarifarios');
-    }
-  }
-  return [];
-}
-
-/**
- * Guarda la lista de tarifarios en localStorage.
- * @param {Array} tarifarios
- */
-function saveTarifarios(tarifarios) {
-  localStorage.setItem('tarifarios', JSON.stringify(tarifarios));
-}
-
-/**
- * Obtiene el índice del tarifario activo. Si no existe, devuelve 0.
- */
-function getActiveTarifarioIndex() {
-  const idx = localStorage.getItem('activeTarifarioIndex');
-  return idx !== null ? parseInt(idx, 10) : 0;
-}
-
-/**
- * Establece el índice del tarifario activo en localStorage.
- * @param {number} idx
- */
-function setActiveTarifarioIndex(idx) {
-  localStorage.setItem('activeTarifarioIndex', idx.toString());
-}
-
-/**
  * Convierte un archivo a DataURL usando FileReader. Retorna una promesa.
  * @param {File} file
  */
@@ -283,131 +175,459 @@ function fileToDataURL(file) {
 }
 
 /**
- * Dibuja la lista de tarifarios con sus controles de activación y eliminación.
+ * Garantiza que exista un dataset base en appState y localStorage, además de
+ * inicializar la lista fija de aseguradoras y normalizar las tarifas existentes.
  */
-function renderTarifariosList() {
-  const listElem = document.getElementById('tarifariosList');
+async function ensureTarifarioDataset() {
+  await loadTarifario();
+  if (!appState.data) {
+    appState.data = { aseguradoras: ['Particular'], examenes: [] };
+  }
+  if (!Array.isArray(appState.data.examenes)) {
+    appState.data.examenes = [];
+  }
+  const insurers = ensureFixedInsurersList();
+  const fullList = Array.from(new Set(['Particular', ...insurers]));
+  appState.data.aseguradoras = fullList;
+  appState.aseguradoras = fullList;
+  appState.examenes = appState.data.examenes;
+  appState.data.examenes.forEach((exam) => {
+    if (!exam.tarifas) {
+      exam.tarifas = {};
+    }
+    insurers.forEach((ins) => {
+      if (!(ins in exam.tarifas)) {
+        exam.tarifas[ins] = null;
+      }
+    });
+  });
+  localStorage.setItem('tarifarioData', JSON.stringify(appState.data));
+}
+
+/**
+ * Devuelve la lista de aseguradoras fijas para la gestión de tarifarios.
+ */
+function getFixedInsurers() {
+  return ensureFixedInsurersList();
+}
+
+/**
+ * Lee o inicializa la lista fija de aseguradoras a partir del dataset actual.
+ */
+function ensureFixedInsurersList() {
+  const stored = localStorage.getItem('fixedInsurers');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((ins) => typeof ins === 'string' && ins.trim().length > 0);
+      }
+    } catch (e) {
+      console.error('No se pudo parsear fixedInsurers', e);
+      localStorage.removeItem('fixedInsurers');
+    }
+  }
+  const base = appState.data && Array.isArray(appState.data.aseguradoras)
+    ? appState.data.aseguradoras.filter((ins) => ins && ins !== 'Particular')
+    : [];
+  const unique = Array.from(new Set(base));
+  localStorage.setItem('fixedInsurers', JSON.stringify(unique));
+  return unique;
+}
+
+/**
+ * Renderiza los cargadores de tarifarios por aseguradora con su estado actual.
+ */
+function renderInsurerTariffManager() {
+  const listElem = document.getElementById('insurerTarifarioList');
+  if (!listElem) return;
   listElem.innerHTML = '';
-  const tarifarios = loadTarifarios();
-  const active = getActiveTarifarioIndex();
-  if (tarifarios.length === 0) {
+  const insurers = getFixedInsurers();
+  const meta = loadTarifarioUpdateMeta();
+  const globalMessage = document.getElementById('tarifarioUploadMessage');
+  if (globalMessage) {
+    globalMessage.textContent = '';
+    globalMessage.style.color = '';
+  }
+  if (!insurers || insurers.length === 0) {
     const li = document.createElement('li');
-    li.textContent = 'No hay tarifarios cargados.';
+    li.textContent = 'No hay aseguradoras configuradas en el tarifario actual.';
     listElem.appendChild(li);
+    if (globalMessage) {
+      globalMessage.textContent = 'Actualice el tarifario base para definir las aseguradoras disponibles.';
+      globalMessage.style.color = 'red';
+    }
     return;
   }
-  tarifarios.forEach((tar, idx) => {
+  insurers.forEach((insurer) => {
     const li = document.createElement('li');
     li.style.display = 'flex';
-    li.style.alignItems = 'center';
-    li.style.gap = '10px';
-    // Nombre del tarifario
+    li.style.flexDirection = 'column';
+    li.style.alignItems = 'flex-start';
+    li.style.gap = '6px';
+
+    const headerRow = document.createElement('div');
+    headerRow.style.display = 'flex';
+    headerRow.style.alignItems = 'center';
+    headerRow.style.gap = '10px';
+
     const nameSpan = document.createElement('span');
-    nameSpan.textContent = tar.name;
-    if (idx === active) {
-      nameSpan.style.fontWeight = 'bold';
+    nameSpan.textContent = insurer;
+    nameSpan.style.fontWeight = '600';
+    headerRow.appendChild(nameSpan);
+
+    const uploadBtn = document.createElement('button');
+    uploadBtn.textContent = 'Cargar tarifario';
+    uploadBtn.className = 'btn';
+    uploadBtn.style.fontSize = '12px';
+    headerRow.appendChild(uploadBtn);
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.xlsx';
+    fileInput.style.display = 'none';
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    headerRow.appendChild(fileInput);
+    li.appendChild(headerRow);
+
+    const status = document.createElement('span');
+    status.className = 'message';
+    status.style.fontSize = '12px';
+    status.style.color = '#555';
+    const metaInfo = meta && meta[insurer];
+    if (metaInfo) {
+      status.textContent = formatInsurerUpdateStatus(metaInfo);
+      status.style.color = '#0a7a0a';
+    } else {
+      status.textContent = 'Sin cargas registradas.';
     }
-    li.appendChild(nameSpan);
-    // Botón activar
-    const activateBtn = document.createElement('button');
-    activateBtn.textContent = 'Activar';
-    activateBtn.className = 'btn';
-    activateBtn.style.fontSize = '12px';
-    activateBtn.disabled = idx === active;
-    activateBtn.addEventListener('click', () => {
-      // Establecer activo
-      setActiveTarifarioIndex(idx);
-      // Establecer tarifarioData para cotizador
-      localStorage.setItem('tarifarioData', JSON.stringify(tar.data));
-      // Guardar logo activo para usar en el PDF
-      if (tar.logo) {
-        localStorage.setItem('tarifarioLogo', tar.logo);
-      } else {
-        localStorage.removeItem('tarifarioLogo');
+    li.appendChild(status);
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      status.style.color = '#333';
+      status.textContent = 'Procesando archivo...';
+      try {
+        const parsed = await parseInsurerTarifarioFile(file, insurer);
+        const result = applyInsurerTarifarioUpdate(insurer, parsed.rows);
+        const metaMap = loadTarifarioUpdateMeta();
+        metaMap[insurer] = {
+          updatedAt: new Date().toISOString(),
+          processed: parsed.rows.length,
+          updated: result.updatedCount,
+          created: result.createdCount,
+        };
+        saveTarifarioUpdateMeta(metaMap);
+        status.style.color = '#0a7a0a';
+        status.textContent = formatInsurerUpdateStatus(metaMap[insurer]);
+        renderInsurerLogos();
+      } catch (err) {
+        console.error('Error al actualizar tarifario de aseguradora', err);
+        status.style.color = 'red';
+        status.textContent = err && err.message ? `Error: ${err.message}` : 'Error al procesar el archivo.';
+      } finally {
+        fileInput.value = '';
       }
-      renderTarifariosList();
     });
-    li.appendChild(activateBtn);
-    // Botón eliminar
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Eliminar';
-    deleteBtn.className = 'btn';
-    deleteBtn.style.backgroundColor = '#c00';
-    deleteBtn.style.fontSize = '12px';
-    deleteBtn.addEventListener('click', () => {
-      const tarifariosArr = loadTarifarios();
-      // Confirmación
-      if (!confirm('¿Está seguro de eliminar este tarifario?')) {
-        return;
-      }
-      tarifariosArr.splice(idx, 1);
-      saveTarifarios(tarifariosArr);
-      // Si se eliminó el activo, ajustar el índice y dataset activo
-      let newActive = getActiveTarifarioIndex();
-      if (idx === newActive) {
-        newActive = 0;
-        if (tarifariosArr.length > 0) {
-          const firstTar = tarifariosArr[0];
-          localStorage.setItem('tarifarioData', JSON.stringify(firstTar.data));
-          if (firstTar.logo) {
-            localStorage.setItem('tarifarioLogo', firstTar.logo);
-          } else {
-            localStorage.removeItem('tarifarioLogo');
-          }
-        } else {
-          localStorage.removeItem('tarifarioData');
-          localStorage.removeItem('tarifarioLogo');
-        }
-      } else if (idx < newActive) {
-        newActive--;
-      }
-      setActiveTarifarioIndex(newActive);
-      renderTarifariosList();
-    });
-    li.appendChild(deleteBtn);
-    // Vista previa de logo si existe
-    if (tar.logo) {
-      const img = document.createElement('img');
-      img.src = tar.logo;
-      img.alt = 'Logo';
-      img.style.width = '40px';
-      img.style.height = 'auto';
-      li.appendChild(img);
-    }
-    // Botón para subir o cambiar logo del tarifario
-    const logoBtn = document.createElement('button');
-    logoBtn.textContent = tar.logo ? 'Cambiar logo' : 'Subir logo';
-    logoBtn.className = 'btn';
-    logoBtn.style.fontSize = '12px';
-    logoBtn.addEventListener('click', () => {
-      // Crear input de tipo file y simular clic
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.png,.jpg,.jpeg';
-      input.onchange = async () => {
-        const file = input.files[0];
-        if (file) {
-          const dataUrl = await fileToDataURL(file);
-          // Actualizar el logo en la lista y guardar en localStorage
-          const arr = loadTarifarios();
-          arr[idx].logo = dataUrl;
-          saveTarifarios(arr);
-          // Si es el activo, actualizar logo para el PDF
-          if (idx === getActiveTarifarioIndex()) {
-            localStorage.setItem('tarifarioLogo', dataUrl);
-          }
-          renderTarifariosList();
-        }
-      };
-      input.click();
-    });
-    li.appendChild(logoBtn);
+
     listElem.appendChild(li);
   });
-  // Si los tarifarios cambian (activan, eliminan, etc.), renderizar logos nuevamente
-  if (typeof renderInsurerLogos === 'function') {
-    renderInsurerLogos();
+}
+
+/**
+ * Analiza un archivo Excel de tarifario para una aseguradora específica.
+ * @param {File} file
+ * @param {string} insurerName
+ * @returns {Promise<{rows: Array}>}
+ */
+function parseInsurerTarifarioFile(file, insurerName) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          throw new Error('El archivo no contiene hojas.');
+        }
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+        if (!rows || rows.length === 0) {
+          throw new Error('El archivo no contiene registros.');
+        }
+        const headerLookup = buildHeaderLookup(rows);
+        const codeHeader = findHeaderKey(headerLookup, ['codigo', 'código', 'cod']);
+        if (!codeHeader) {
+          throw new Error('No se encontró la columna "CODIGO".');
+        }
+        const descriptionHeader = findHeaderKey(headerLookup, ['descripcion', 'descripción', 'detalle', 'nombre']);
+        const groupHeader = findHeaderKey(headerLookup, ['grupo', 'categoria']);
+        const priceHeader = findHeaderKey(headerLookup, ['precio', 'pvp', 'preciopublico', 'valorpublico']);
+        const normalizedInsurer = normalizeHeaderKey(insurerName);
+        const tariffHeader = findHeaderKey(headerLookup, [
+          insurerName,
+          normalizedInsurer,
+          `${normalizedInsurer}tarifa`,
+          `${normalizedInsurer}pva`,
+          'tarifa',
+          'valor',
+          'pva',
+          'precioaseguradora',
+          'valoraseguradora',
+        ]);
+        if (!tariffHeader) {
+          throw new Error(`No se encontró una columna de tarifa para ${insurerName}.`);
+        }
+        const parsedRows = [];
+        rows.forEach((row) => {
+          const codigo = normalizeCode(row[codeHeader]);
+          if (!codigo) return;
+          const descripcion = descriptionHeader ? sanitizeText(row[descriptionHeader]) : '';
+          const grupo = groupHeader ? sanitizeText(row[groupHeader]) : '';
+          const precio = priceHeader ? parseNumeric(row[priceHeader]) : null;
+          const tarifa = parseNumeric(row[tariffHeader]);
+          parsedRows.push({ codigo, descripcion, grupo, precio, tarifa });
+        });
+        if (parsedRows.length === 0) {
+          throw new Error('No se encontraron filas válidas en el archivo.');
+        }
+        resolve({ rows: parsedRows });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Aplica los cambios del tarifario cargado a la data general.
+ * @param {string} insurerName
+ * @param {Array} rows
+ * @returns {{updatedCount: number, createdCount: number}}
+ */
+function applyInsurerTarifarioUpdate(insurerName, rows) {
+  if (!appState.data) {
+    appState.data = { aseguradoras: ['Particular'], examenes: [] };
   }
+  if (!Array.isArray(appState.data.examenes)) {
+    appState.data.examenes = [];
+  }
+  const insurers = getFixedInsurers();
+  const allInsurers = new Set(['Particular', ...insurers, insurerName]);
+  appState.data.aseguradoras = Array.from(allInsurers);
+  appState.aseguradoras = appState.data.aseguradoras;
+
+  const examMap = new Map();
+  appState.data.examenes.forEach((exam) => {
+    if (exam && exam.codigo) {
+      examMap.set(exam.codigo, exam);
+    }
+  });
+
+  let updatedCount = 0;
+  let createdCount = 0;
+
+  rows.forEach((row) => {
+    if (!row || !row.codigo) {
+      return;
+    }
+    let exam = examMap.get(row.codigo);
+    if (!exam) {
+      exam = {
+        codigo: row.codigo,
+        descripcion: row.descripcion || '',
+        grupo: row.grupo || '',
+        precio: row.precio != null && !isNaN(row.precio) ? row.precio : 0,
+        tarifas: {},
+      };
+      appState.data.examenes.push(exam);
+      examMap.set(row.codigo, exam);
+      createdCount += 1;
+    } else {
+      if (row.descripcion) {
+        exam.descripcion = row.descripcion;
+      }
+      if (row.grupo) {
+        exam.grupo = row.grupo;
+      }
+      if (row.precio != null && !isNaN(row.precio)) {
+        exam.precio = row.precio;
+      }
+    }
+    if (!exam.tarifas) {
+      exam.tarifas = {};
+    }
+    exam.tarifas[insurerName] = row.tarifa != null && !isNaN(row.tarifa) ? row.tarifa : null;
+    updatedCount += 1;
+  });
+
+  appState.data.examenes.forEach((exam) => {
+    if (!exam.tarifas) {
+      exam.tarifas = {};
+    }
+    appState.data.aseguradoras.forEach((ins) => {
+      if (ins === 'Particular') return;
+      if (!(ins in exam.tarifas)) {
+        exam.tarifas[ins] = null;
+      }
+    });
+  });
+
+  appState.data.examenes.sort((a, b) => a.codigo.localeCompare(b.codigo));
+  appState.examenes = appState.data.examenes;
+  localStorage.setItem('tarifarioData', JSON.stringify(appState.data));
+
+  return { updatedCount, createdCount };
+}
+
+/**
+ * Genera un mapa de encabezados normalizados a partir de las filas leídas del Excel.
+ */
+function buildHeaderLookup(rows) {
+  const lookup = {};
+  rows.forEach((row) => {
+    Object.keys(row).forEach((key) => {
+      const normalized = normalizeHeaderKey(key);
+      if (normalized && !(normalized in lookup)) {
+        lookup[normalized] = key;
+      }
+    });
+  });
+  return lookup;
+}
+
+/**
+ * Busca el encabezado original correspondiente a alguna de las variantes proporcionadas.
+ */
+function findHeaderKey(lookup, candidates) {
+  if (!lookup) return null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalizedCandidate = normalizeHeaderKey(candidate);
+    if (normalizedCandidate && lookup[normalizedCandidate]) {
+      return lookup[normalizedCandidate];
+    }
+  }
+  return null;
+}
+
+/**
+ * Normaliza una clave de encabezado eliminando espacios, signos y tildes.
+ */
+function normalizeHeaderKey(key) {
+  if (!key && key !== 0) return '';
+  return key
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * Convierte valores numéricos expresados como string o número a un número flotante.
+ */
+function parseNumeric(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'number' && !isNaN(value)) return value;
+  const str = value.toString().trim();
+  if (!str) return null;
+  let normalized = str.replace(/\s+/g, '');
+  const hasComma = normalized.includes(',');
+  const hasDot = normalized.includes('.');
+  if (hasComma && hasDot) {
+    if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+      normalized = normalized.replace(/\./g, '').replace(',', '.');
+    } else {
+      normalized = normalized.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    normalized = normalized.replace(',', '.');
+  } else if ((normalized.match(/\./g) || []).length > 1) {
+    const parts = normalized.split('.');
+    normalized = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+  }
+  const num = parseFloat(normalized);
+  return Number.isNaN(num) ? null : num;
+}
+
+/**
+ * Normaliza códigos numéricos provenientes de Excel (elimina decimales residuales).
+ */
+function normalizeCode(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '';
+    return Math.trunc(value).toString();
+  }
+  let str = value.toString().trim();
+  if (!str) return '';
+  str = str.replace(/\s+/g, '');
+  if (/^\d+\.0+$/.test(str)) {
+    return str.split('.')[0];
+  }
+  return str;
+}
+
+/**
+ * Limpia valores de texto eliminando espacios extra y convirtiendo a string.
+ */
+function sanitizeText(value) {
+  if (value == null) return '';
+  return value.toString().trim();
+}
+
+/**
+ * Lee el estado de actualizaciones por aseguradora desde localStorage.
+ */
+function loadTarifarioUpdateMeta() {
+  const stored = localStorage.getItem('tarifarioUpdateMeta');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    } catch (e) {
+      console.error('No se pudo parsear tarifarioUpdateMeta', e);
+      localStorage.removeItem('tarifarioUpdateMeta');
+    }
+  }
+  return {};
+}
+
+/**
+ * Guarda el estado de actualizaciones por aseguradora en localStorage.
+ */
+function saveTarifarioUpdateMeta(meta) {
+  localStorage.setItem('tarifarioUpdateMeta', JSON.stringify(meta));
+}
+
+/**
+ * Formatea el mensaje de estado mostrado bajo cada aseguradora.
+ */
+function formatInsurerUpdateStatus(meta) {
+  if (!meta) return 'Sin cargas registradas.';
+  const updated = typeof meta.updated === 'number' ? meta.updated : meta.processed || 0;
+  const created = typeof meta.created === 'number' ? meta.created : 0;
+  let dateLabel = meta.updatedAt;
+  if (meta.updatedAt) {
+    const parsedDate = new Date(meta.updatedAt);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      dateLabel = parsedDate.toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' });
+    }
+  }
+  if (created > 0) {
+    return `Actualizado ${updated} registros (${created} nuevos) el ${dateLabel}.`;
+  }
+  return `Actualizado ${updated} registros el ${dateLabel}.`;
 }
 
 /**
@@ -491,10 +711,10 @@ function downloadTarifarioTemplate() {
     console.error('La librería XLSX no está disponible para generar la plantilla.');
     return;
   }
-  const header = ['DESCRIPCIÓN', 'CODIGO', 'GRUPO', 'PRECIO', 'ASEGURADORA_1', 'ASEGURADORA_2'];
+  const header = ['DESCRIPCIÓN', 'CODIGO', 'GRUPO', 'PRECIO', 'TARIFA'];
   const sampleRows = [
-    ['Hemograma completo', 'LAB001', 'Laboratorio', 25, 20, 18],
-    ['Resonancia magnética', 'IMG001', 'Imagen', 120, 90, 85],
+    ['Hemograma completo', 'LAB001', 'Laboratorio', 25, 20],
+    ['Resonancia magnética', 'IMG001', 'Imagen', 120, 90],
   ];
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...sampleRows]);
   worksheet['!cols'] = header.map((_, idx) => ({ wch: idx === 0 ? 35 : 18 }));
@@ -577,37 +797,6 @@ function renderUsers() {
 }
 
 /**
- * Verifica si hay tarifarios guardados en localStorage y, en caso de no haber ninguno,
- * carga el tarifario por defecto desde el archivo JSON incluido en la aplicación.
- * Esto permite que el administrador tenga un tarifario base disponible al ingresar
- * por primera vez a la página de administración. También establece este tarifario
- * como el activo y guarda sus datos en localStorage para que el cotizador lo use.
- */
-async function ensureDefaultTarifario() {
-  const existing = loadTarifarios();
-  if (existing && existing.length > 0) {
-    return;
-  }
-  // Cargar dataset predeterminado utilizando la función de app.js
-  try {
-    await loadTarifario();
-    if (appState && appState.data) {
-      const defaultEntry = {
-        name: 'Tarifario base',
-        data: appState.data,
-        logo: null,
-      };
-      saveTarifarios([defaultEntry]);
-      setActiveTarifarioIndex(0);
-      localStorage.setItem('tarifarioData', JSON.stringify(appState.data));
-      localStorage.removeItem('tarifarioLogo');
-    }
-  } catch (e) {
-    console.warn('No se pudo cargar el tarifario por defecto', e);
-  }
-}
-
-/**
  * Devuelve un mapa de logos por aseguradora almacenados en localStorage.
  * Las claves son los nombres de las aseguradoras y los valores son DataURLs.
  */
@@ -640,10 +829,15 @@ function renderInsurerLogos() {
   const listElem = document.getElementById('insurerLogoList');
   if (!listElem) return;
   listElem.innerHTML = '';
-  const insurers = appState && appState.aseguradoras ? appState.aseguradoras : [];
+  const insurers = getFixedInsurers();
   const logosMap = loadLogosByInsurer();
+  if (!insurers || insurers.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No hay aseguradoras configuradas.';
+    listElem.appendChild(li);
+    return;
+  }
   insurers.forEach((ins) => {
-    if (ins === 'Particular') return;
     const li = document.createElement('li');
     li.style.display = 'flex';
     li.style.alignItems = 'center';
@@ -688,66 +882,3 @@ function renderInsurerLogos() {
   });
 }
 
-/**
- * Convierte un archivo Excel (.xlsx) en un objeto de tarifario compatible con la aplicación.
- * El archivo debe tener columnas: DESCRIPCIÓN, CODIGO, GRUPO, PRECIO y una columna por aseguradora.
- * @param {File} file
- * @returns {Promise<{aseguradoras: string[], examenes: any[]}>}
- */
-function parseExcelFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
-        const reserved = ['DESCRIPCIÓN', 'CODIGO', 'GRUPO', 'PRECIO'];
-        if (!rows || rows.length === 0) {
-          throw new Error('estructura_incorrecta');
-        }
-        const firstRow = rows[0];
-        const missing = reserved.filter((col) => !(col in firstRow));
-        if (missing.length > 0) {
-          throw new Error('estructura_incorrecta');
-        }
-        const insurers = new Set(['Particular']);
-        const examenes = [];
-        rows.forEach((row) => {
-          const descripcion = row['DESCRIPCIÓN'];
-          if (!descripcion) return;
-          let codigo = row['CODIGO'] || '';
-          if (typeof codigo === 'number') {
-            codigo = codigo.toString().split('.')[0];
-          } else {
-            codigo = codigo.toString();
-          }
-          const grupo = row['GRUPO'] ? row['GRUPO'].toString().trim() : '';
-          const precio = row['PRECIO'] != null ? parseFloat(row['PRECIO']) || 0 : 0;
-          const tarifas = {};
-          Object.keys(row).forEach((key) => {
-            if (!reserved.includes(key)) {
-              const val = row[key];
-              if (val != null && val !== '') {
-                tarifas[key] = parseFloat(val);
-              } else {
-                tarifas[key] = null;
-              }
-              insurers.add(key);
-            }
-          });
-          examenes.push({ codigo, descripcion: descripcion.toString().trim(), grupo, precio, tarifas });
-        });
-        resolve({ aseguradoras: Array.from(insurers), examenes });
-      } catch (err) {
-        reject(err);
-      }
-    };
-    reader.onerror = () => {
-      reject(new Error('No se pudo leer el archivo'));
-    };
-    reader.readAsArrayBuffer(file);
-  });
-}
