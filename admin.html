@@ -50,6 +50,35 @@
       <h2>Tarifarios por aseguradora</h2>
       <ul id="insurerTarifarioList" class="tarifario-list"></ul>
       <hr />
+      <h2>Logo institucional de Metrored</h2>
+      <p>
+        Actualice el logo principal que se muestra en el cotizador, la página web y los
+        documentos PDF. El archivo debe respetar las proporciones originales para evitar
+        distorsiones. Puede cargar imágenes en formato <strong>SVG, PNG o JPG</strong>.
+      </p>
+      <div id="metroredLogoManager" class="branding-block">
+        <img
+          id="metroredLogoPreview"
+          alt="Logo actual de Metrored"
+          style="max-width: 260px; height: auto; display: none;"
+        />
+        <div class="branding-actions">
+          <button id="uploadMetroredLogoBtn" type="button" class="btn btn-small">
+            Cargar nuevo logo
+          </button>
+          <button
+            id="resetMetroredLogoBtn"
+            type="button"
+            class="btn btn-small"
+            style="background-color: #888;"
+          >
+            Restaurar logo original
+          </button>
+        </div>
+        <p id="metroredLogoMessage" class="message"></p>
+      </div>
+
+      <hr />
       <h2>Logos de aseguradoras</h2>
       <p>
         Asigne o cambie el logo de cada aseguradora para que aparezca en el

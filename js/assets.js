@@ -46,7 +46,26 @@ const METRORED_FAVICON_SVG = `
 const METRORED_FAVICON_DATA_URL =
   'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(METRORED_FAVICON_SVG);
 
-window.METRORED_ASSETS = Object.freeze({
-  logo: METRORED_LOGO_DATA_URL,
-  favicon: METRORED_FAVICON_DATA_URL,
-});
+function readLocalAssetOverride(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+const storedLogo = readLocalAssetOverride('metroredLogoOverride');
+const storedFavicon = readLocalAssetOverride('metroredFaviconOverride');
+
+window.METRORED_ASSETS = {
+  logo: storedLogo || METRORED_LOGO_DATA_URL,
+  favicon: storedFavicon || METRORED_FAVICON_DATA_URL,
+  defaults: {
+    logo: METRORED_LOGO_DATA_URL,
+    favicon: METRORED_FAVICON_DATA_URL,
+  },
+  overrides: {
+    logo: storedLogo,
+    favicon: storedFavicon,
+  },
+};

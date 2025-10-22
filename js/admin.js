@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderUsers();
   renderInsurerTariffManager();
   renderInsurerLogos();
+  renderMetroredLogoManager();
 
   // Preparar descarga de logs: se gestiona desde downloadLogBtn
   const downloadBtn = document.getElementById('downloadLogBtn');
@@ -880,5 +881,132 @@ function renderInsurerLogos() {
     li.appendChild(btn);
     listElem.appendChild(li);
   });
+}
+
+function renderMetroredLogoManager(feedback) {
+  const preview = document.getElementById('metroredLogoPreview');
+  const uploadBtn = document.getElementById('uploadMetroredLogoBtn');
+  const resetBtn = document.getElementById('resetMetroredLogoBtn');
+  const messageElem = document.getElementById('metroredLogoMessage');
+  if (!preview || !uploadBtn || !resetBtn || !messageElem) {
+    return;
+  }
+
+  applyMetroredLogoToPage();
+  const currentLogo = getCurrentMetroredLogo();
+  if (currentLogo) {
+    preview.src = currentLogo;
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+
+  const hasOverride = Boolean(getMetroredLogoOverride());
+  resetBtn.disabled = !hasOverride;
+  resetBtn.style.opacity = hasOverride ? '' : '0.6';
+  resetBtn.style.cursor = hasOverride ? 'pointer' : 'not-allowed';
+
+  uploadBtn.onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.svg,.png,.jpg,.jpeg';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) {
+        return;
+      }
+      if (messageElem) {
+        messageElem.textContent = 'Procesando logo…';
+        messageElem.style.color = '';
+      }
+      try {
+        const dataUrl = await fileToDataURL(file);
+        saveMetroredLogoOverride(dataUrl);
+        renderMetroredLogoManager({
+          text: 'Logo de Metrored actualizado correctamente.',
+          color: 'green',
+        });
+      } catch (e) {
+        console.error('No se pudo actualizar el logo de Metrored', e);
+        renderMetroredLogoManager({
+          text: 'No se pudo actualizar el logo. Intente con otro archivo.',
+          color: 'red',
+        });
+      }
+    };
+    input.click();
+  };
+
+  resetBtn.onclick = () => {
+    if (!hasOverride) {
+      return;
+    }
+    clearMetroredLogoOverride();
+    renderMetroredLogoManager({
+      text: 'Logo restaurado al diseño original de Metrored.',
+      color: 'green',
+    });
+  };
+
+  if (feedback && feedback.text) {
+    messageElem.textContent = feedback.text;
+    messageElem.style.color = feedback.color || 'green';
+  } else {
+    messageElem.textContent = '';
+    messageElem.style.color = '';
+  }
+}
+
+function getMetroredDefaultLogo() {
+  if (
+    window.METRORED_ASSETS &&
+    window.METRORED_ASSETS.defaults &&
+    window.METRORED_ASSETS.defaults.logo
+  ) {
+    return window.METRORED_ASSETS.defaults.logo;
+  }
+  return (window.METRORED_ASSETS && window.METRORED_ASSETS.logo) || '';
+}
+
+function getMetroredLogoOverride() {
+  try {
+    return localStorage.getItem('metroredLogoOverride');
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveMetroredLogoOverride(dataUrl) {
+  try {
+    localStorage.setItem('metroredLogoOverride', dataUrl);
+  } catch (e) {
+    throw e;
+  }
+}
+
+function clearMetroredLogoOverride() {
+  try {
+    localStorage.removeItem('metroredLogoOverride');
+  } catch (e) {
+    console.error('No se pudo limpiar el logo personalizado de Metrored', e);
+  }
+}
+
+function getCurrentMetroredLogo() {
+  return getMetroredLogoOverride() || getMetroredDefaultLogo();
+}
+
+function applyMetroredLogoToPage() {
+  const logo = getCurrentMetroredLogo();
+  if (window.METRORED_ASSETS) {
+    window.METRORED_ASSETS.logo = logo;
+    if (window.METRORED_ASSETS.overrides) {
+      window.METRORED_ASSETS.overrides.logo = getMetroredLogoOverride();
+    }
+  }
+  const headerLogo = document.getElementById('adminLogo');
+  if (headerLogo && logo) {
+    headerLogo.src = logo;
+  }
 }
 
