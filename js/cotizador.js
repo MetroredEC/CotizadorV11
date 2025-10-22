@@ -400,6 +400,10 @@ function initCotizador() {
       const insurerLogoNaturalSize = insurerLogoDataUrl
         ? await getImageDimensions(insurerLogoDataUrl).catch(() => null)
         : null;
+      const metroLogoPdfAsset = await resolveImageForPdf(metroLogoDataUrl, metroLogoNaturalSize);
+      const insurerLogoPdfAsset = insurerLogoDataUrl
+        ? await resolveImageForPdf(insurerLogoDataUrl, insurerLogoNaturalSize)
+        : null;
       const metroLogoScale = 1.5;
       const metroLogoTargetWidth = 23 * metroLogoScale; // 50% más ancho que el tamaño original
       const metroLogoWidth = metroLogoTargetWidth;
@@ -424,20 +428,28 @@ function initCotizador() {
           insurerLogoHeight = metroLogoHeight;
         }
       }
-    // Definiciones de layout
-    // Altura de cada fila en la tabla. Para A4 usamos filas más altas para evitar superposiciones
-    // Aumentamos ligeramente la altura para garantizar que el encabezado de la tabla
-    // y las filas de los exámenes no se superpongan visualmente incluso con textos largos.
-    const rowHeight = 9;
-    // Márgenes del documento en A4. Dejar 10 mm a cada lado para texto más grande
-    const margin = 10;
-    const logoY = margin + 2;
-    const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
-    const titleOffsetFromLogos = 10;
-    const titleY = logoY + logosMaxHeight + titleOffsetFromLogos;
-    const detailsBlankRowHeight = rowHeight; // Altura de la fila en blanco entre el título y la información del cliente
-    const detailsStartSpacing = 12 + detailsBlankRowHeight; // Espacio adicional entre el título y la tabla de información del cliente
-    const detailsStartY = titleY + detailsStartSpacing;
+      const metroLogoImageForPdf = metroLogoPdfAsset ? metroLogoPdfAsset.dataUrl : metroLogoDataUrl;
+      const metroLogoImageFormat = metroLogoPdfAsset ? metroLogoPdfAsset.format : 'PNG';
+      const insurerLogoImageForPdf = insurerLogoPdfAsset
+        ? insurerLogoPdfAsset.dataUrl
+        : insurerLogoDataUrl;
+      const insurerLogoImageFormat = insurerLogoPdfAsset ? insurerLogoPdfAsset.format : 'PNG';
+
+      // Definiciones de layout
+      // Altura de cada fila en la tabla. Para A4 usamos filas más altas para evitar superposiciones
+      // Aumentamos ligeramente la altura para garantizar que el encabezado de la tabla
+      // y las filas de los exámenes no se superpongan visualmente incluso con textos largos.
+      const rowHeight = 9;
+      // Márgenes del documento en A4. Dejar 10 mm a cada lado para texto más grande
+      const margin = 10;
+      const logoY = margin + 2;
+      const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
+      const titleOffsetFromLogos = 10;
+      const titleY = logoY + logosMaxHeight + titleOffsetFromLogos;
+      const detailsBlankRowHeight = rowHeight; // Altura de la fila en blanco entre el título y la información del cliente
+      const detailsStartSpacing = 12 + detailsBlankRowHeight;
+      // Espacio adicional entre el título y la tabla de información del cliente
+      const detailsStartY = titleY + detailsStartSpacing;
     const detailLineSpacing = 4;
     const detailLinesCount = 4;
     const headerBottomPadding = 12;
@@ -501,12 +513,19 @@ function initCotizador() {
       // No dibujar marco exterior para formato A4
       // Logos
       // Logo de Metrored a la izquierda
-      doc.addImage(metroLogoDataUrl, 'PNG', margin, logoY, metroLogoWidth, metroLogoHeight);
+      doc.addImage(
+        metroLogoImageForPdf,
+        metroLogoImageFormat,
+        margin,
+        logoY,
+        metroLogoWidth,
+        metroLogoHeight
+      );
       // Logo del seguro a la derecha si existe
       if (insurerLogoDataUrl && insurerLogoWidth && insurerLogoHeight) {
         doc.addImage(
-          insurerLogoDataUrl,
-          'PNG',
+          insurerLogoImageForPdf,
+          insurerLogoImageFormat,
           pageWidth - margin - insurerLogoWidth,
           logoY,
           insurerLogoWidth,
@@ -766,5 +785,66 @@ function getImageDimensions(dataUrl) {
     };
     img.onerror = (error) => reject(error);
     img.src = dataUrl;
+  });
+}
+
+/**
+ * Asegura que la imagen entregada sea compatible con jsPDF devolviendo un DataURL rasterizado y su formato.
+ * Si recibe un SVG lo convierte a PNG conservando las proporciones originales.
+ * @param {string} dataUrl
+ * @param {{width: number, height: number}|null} sizeHint
+ * @returns {Promise<{dataUrl: string, format: 'PNG' | 'JPEG' | 'WEBP'}>}
+ */
+async function resolveImageForPdf(dataUrl, sizeHint) {
+  if (!dataUrl) {
+    return null;
+  }
+  if (dataUrl.startsWith('data:image/svg+xml')) {
+    try {
+      const rasterized = await rasterizeSvgDataUrl(dataUrl, sizeHint);
+      return { dataUrl: rasterized, format: 'PNG' };
+    } catch (error) {
+      console.warn('No se pudo rasterizar el SVG, se usará el recurso original.', error);
+      return { dataUrl, format: 'PNG' };
+    }
+  }
+  if (dataUrl.startsWith('data:image/png')) {
+    return { dataUrl, format: 'PNG' };
+  }
+  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) {
+    return { dataUrl, format: 'JPEG' };
+  }
+  if (dataUrl.startsWith('data:image/webp')) {
+    return { dataUrl, format: 'WEBP' };
+  }
+  return { dataUrl, format: 'PNG' };
+}
+
+/**
+ * Convierte un DataURL de SVG en un DataURL PNG utilizando un canvas temporal.
+ * @param {string} svgDataUrl
+ * @param {{width: number, height: number}|null} sizeHint
+ * @returns {Promise<string>}
+ */
+function rasterizeSvgDataUrl(svgDataUrl, sizeHint) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const width = Math.max(1, Math.floor(img.naturalWidth || (sizeHint && sizeHint.width) || 128));
+      const height = Math.max(1, Math.floor(img.naturalHeight || (sizeHint && sizeHint.height) || 128));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      try {
+        resolve(canvas.toDataURL('image/png'));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = (error) => reject(error);
+    img.src = svgDataUrl;
   });
 }
