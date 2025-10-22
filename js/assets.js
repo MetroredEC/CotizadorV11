@@ -31,10 +31,18 @@ const METRORED_LOGO_DATA_URL =
 
 const METRORED_FAVICON_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#d3222a" />
+  <rect width="64" height="64" rx="14" fill="#05a4eb" />
   <path
-    d="M16 48V16h7.5l8.5 15 8.5-15H48v32h-7.5V33.5L32 48l-8.5-14.5V48Z"
-    fill="#ffffff"
+    d="M18 48V18l6.5 0 7.5 14 7.5-14H46v30h-6.5V33l-9 15-9-15v15Z"
+    fill="#101820"
+  />
+  <path
+    d="M39.5 18h6.5v8.5"
+    stroke="#d3222a"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
   />
 </svg>
 `.trim();
