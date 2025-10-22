@@ -425,9 +425,9 @@ function initCotizador() {
     const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
     // Espacio adicional entre el encabezado de la tabla y las filas de datos.
     const tableBodyExtraSpacing = 3;
-    // Hacer que la primera fila de contenido se posicione como si fuese la segunda fila
+    // Hacer que la primera fila de contenido se posicione como si fuese la cuarta fila
     // real para evitar cualquier superposición con el encabezado.
-    const tableBodySkippedRows = 1;
+    const tableBodySkippedRows = 3;
     // Punto inicial del área utilizable para filas de datos.
     const tableContentTop =
       tableHeaderYPos + tableBodyExtraSpacing + tableBodySkippedRows * rowHeight;
@@ -563,9 +563,9 @@ function initCotizador() {
       }
       drawHeader();
       // Y inicial para la primera fila de datos en esta página
-      // La primera fila de datos comienza después de omitir explícitamente una fila adicional.
+      // La primera fila de datos comienza después de omitir explícitamente varias filas adicionales.
       // Sumamos el espacio adicional configurable y el número de filas omitidas para
-      // garantizar que el contenido real arranque desde la "segunda" fila visual.
+      // garantizar que el contenido real arranque desde la "cuarta" fila visual.
       let yPos =
         tableHeaderYPos + tableBodyExtraSpacing + (tableBodySkippedRows + 1) * rowHeight;
       const rowsInPage = pageRows[p];
