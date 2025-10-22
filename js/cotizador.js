@@ -431,7 +431,8 @@ function initCotizador() {
     const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
     const titleOffsetFromLogos = 10;
     const titleY = logoY + logosMaxHeight + titleOffsetFromLogos;
-    const detailsStartSpacing = 12; // Espacio adicional entre el título y la tabla de información del cliente
+    const detailsBlankRowHeight = rowHeight; // Altura de la fila en blanco entre el título y la información del cliente
+    const detailsStartSpacing = 12 + detailsBlankRowHeight; // Espacio adicional entre el título y la tabla de información del cliente
     const detailsStartY = titleY + detailsStartSpacing;
     const detailLineSpacing = 4;
     const detailLinesCount = 4;
