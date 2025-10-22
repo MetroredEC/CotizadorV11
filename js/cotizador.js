@@ -396,13 +396,14 @@ function initCotizador() {
     const insurerLogoNaturalSize = insurerLogoDataUrl
       ? await getImageDimensions(insurerLogoDataUrl).catch(() => null)
       : null;
-    const metroLogoTargetWidth = 23 * 1.25; // 25% más ancho que el tamaño original
+    const metroLogoScale = 1.5;
+    const metroLogoTargetWidth = 23 * metroLogoScale; // 50% más ancho que el tamaño original
     const metroLogoWidth = metroLogoTargetWidth;
     const metroLogoHeight = metroLogoNaturalSize
       ? parseFloat(
           ((metroLogoNaturalSize.height / metroLogoNaturalSize.width) * metroLogoTargetWidth).toFixed(2)
         )
-      : 7 * 1.25;
+      : 7 * metroLogoScale;
     let insurerLogoWidth = null;
     let insurerLogoHeight = null;
     if (insurerLogoDataUrl) {
@@ -426,6 +427,15 @@ function initCotizador() {
     const rowHeight = 9;
     // Márgenes del documento en A4. Dejar 10 mm a cada lado para texto más grande
     const margin = 10;
+    const logoY = margin + 2;
+    const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
+    const titleOffsetFromLogos = 10;
+    const titleY = logoY + logosMaxHeight + titleOffsetFromLogos;
+    const detailsStartSpacing = 12; // Espacio adicional entre el título y la tabla de información del cliente
+    const detailsStartY = titleY + detailsStartSpacing;
+    const detailLineSpacing = 4;
+    const detailLinesCount = 4;
+    const headerBottomPadding = 12;
     // Calcular número de cotización y fechas
     const quoteNumber = String(Date.now() % 1000000).padStart(6, '0');
     const todayDate = new Date();
@@ -446,7 +456,8 @@ function initCotizador() {
     // Calcular cuántas filas caben por página
     // Primer margen para header y espacio después del header (deja lugar para detalles y encabezado de tabla)
     // Altura aproximada de la cabecera (incluyendo logos y detalles). Para A4 damos más espacio
-    const headerYEnd = 70;
+    const headerYEnd =
+      detailsStartY + (detailLinesCount - 1) * detailLineSpacing + headerBottomPadding;
     // Desplazamiento adicional entre la información del header y el encabezado de la tabla.
     const tableHeaderYOffset = 6;
     // Posición base del encabezado de la tabla en el eje Y.
@@ -485,7 +496,6 @@ function initCotizador() {
       // No dibujar marco exterior para formato A4
       // Logos
       // Logo de Metrored a la izquierda
-      const logoY = margin + 2;
       doc.addImage(metroLogoDataUrl, 'PNG', margin, logoY, metroLogoWidth, metroLogoHeight);
       // Logo del seguro a la derecha si existe
       if (insurerLogoDataUrl && insurerLogoWidth && insurerLogoHeight) {
@@ -498,31 +508,30 @@ function initCotizador() {
           insurerLogoHeight
         );
       }
-      const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
       // Título centrado con tamaño de letra mayor para A4
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(20);
-      doc.text('COTIZACIÓN', pageWidth / 2, logoY + logosMaxHeight + 10, { align: 'center' });
+      doc.text('COTIZACIÓN', pageWidth / 2, titleY, { align: 'center' });
       // Detalles de cliente y cotización en dos columnas. Fuente ligeramente más grande en A4
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9);
-      let infoY = logoY + logosMaxHeight + 14;
+      let infoY = detailsStartY;
       const col1X = margin;
       const col2X = pageWidth / 2 + 4;
       // Primera fila
       doc.text(`Cliente: ${clientName}`, col1X, infoY);
       doc.text(`Cédula: ${clientCedula}`, col2X, infoY);
-      infoY += 4;
+      infoY += detailLineSpacing;
       // Segunda fila: aseguradora y copago/cobertura
       doc.text(`Aseguradora: ${aseguradora}`, col1X, infoY);
       if (aseguradora !== 'Particular') {
         doc.text(`Copago ref.: ${copagoPercentHeader}%`, col2X, infoY);
       }
-      infoY += 4;
+      infoY += detailLineSpacing;
       // Tercera fila: número de cotización y fecha
       doc.text(`N° Cotización: ${quoteNumber}`, col1X, infoY);
       doc.text(`Fecha: ${quoteDateStr}`, col2X, infoY);
-      infoY += 4;
+      infoY += detailLineSpacing;
       // Cuarta fila: validez
       doc.text(`Validez hasta: ${dueDateStr}`, col1X, infoY);
       // Línea separadora bajo los detalles
@@ -563,6 +572,7 @@ function initCotizador() {
      * Dibuja el pie de página con número de página y texto legal.
      */
     function drawFooter() {
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(7.5);
       doc.setFont('Helvetica', 'normal');
       // Número de página
@@ -692,6 +702,8 @@ function initCotizador() {
           doc.text('$' + value, summaryX + 70 + 40 - 2, rowY + (rowHeight - 2), { align: 'right' });
           rowY += rowHeight;
         }
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('Helvetica', 'normal');
       }
       // Dibujar pie de página
       drawFooter();
