@@ -419,11 +419,24 @@ function initCotizador() {
     // Primer margen para header y espacio después del header (deja lugar para detalles y encabezado de tabla)
     // Altura aproximada de la cabecera (incluyendo logos y detalles). Para A4 damos más espacio
     const headerYEnd = 70;
+    // Desplazamiento adicional entre la información del header y el encabezado de la tabla.
+    const tableHeaderYOffset = 1;
+    // Posición base del encabezado de la tabla en el eje Y.
+    const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
+    // Espacio adicional entre el encabezado de la tabla y las filas de datos.
+    const tableBodyExtraSpacing = 13;
+    // Hacer que la primera fila de contenido se posicione como si fuese la segunda fila
+    // real para evitar cualquier superposición con el encabezado.
+    const tableBodySkippedRows = 0;
+    // Punto inicial del área utilizable para filas de datos.
+    const tableContentTop =
+      tableHeaderYPos + tableBodyExtraSpacing + tableBodySkippedRows * rowHeight;
     // Altura del pie de página para número de página y textos legales en A4
     const footerHeight = 20;
-    const availableHeightNoSummary = pageHeight - headerYEnd - footerHeight;
+    const availableHeightNoSummary = pageHeight - tableContentTop - footerHeight;
     const maxRowsNoSummary = Math.floor(availableHeightNoSummary / rowHeight);
-    const availableHeightWithSummary = pageHeight - headerYEnd - footerHeight - resumenHeight;
+    const availableHeightWithSummary =
+      pageHeight - tableContentTop - footerHeight - resumenHeight;
     const maxRowsWithSummary = Math.floor(availableHeightWithSummary / rowHeight);
     // Distribuir filas entre páginas
     const filas = cart.map((it) => it);
@@ -486,7 +499,7 @@ function initCotizador() {
       doc.setDrawColor(200, 200, 200);
       doc.line(margin, yLine, pageWidth - margin, yLine);
       // Encabezado de la tabla
-      const tableHeaderY = headerYEnd;
+      const tableHeaderY = tableHeaderYPos;
       const headerLabels = ['Código', 'Descripción', 'PVP', 'PVA', 'Cant.', 'Subtotal'];
       // Anchuras de columna adaptadas a formato A4 (suma 190 mm):
       // Código, Descripción, PVP, PVA, Cant., Subtotal
@@ -550,9 +563,11 @@ function initCotizador() {
       }
       drawHeader();
       // Y inicial para la primera fila de datos en esta página
-      // La primera fila de datos comienza una fila por debajo del encabezado de la tabla.
-      // Sumamos un pequeño margen adicional (1 mm) para evitar cualquier solapamiento con textos altos.
-      let yPos = headerYEnd + rowHeight + 1;
+      // La primera fila de datos comienza después de omitir explícitamente varias filas adicionales.
+      // Sumamos el espacio adicional configurable y el número de filas omitidas para
+      // garantizar que el contenido real arranque desde la "cuarta" fila visual.
+      let yPos =
+        tableHeaderYPos + tableBodyExtraSpacing + (tableBodySkippedRows + 1) * rowHeight;
       const rowsInPage = pageRows[p];
       // Dibujar filas
       doc.setFontSize(9);
@@ -605,7 +620,8 @@ function initCotizador() {
           doc.addPage();
           pageNum++;
           drawHeader();
-          summaryY = headerYEnd + rowHeight + 4;
+          summaryY =
+            tableHeaderYPos + tableBodyExtraSpacing + (tableBodySkippedRows + 1) * rowHeight + 4;
         }
         // Construir líneas de resumen: Subtotal, Copago (si aplica) y Total
         const summaryLines = [];
