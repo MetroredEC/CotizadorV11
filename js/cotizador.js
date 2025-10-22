@@ -420,14 +420,14 @@ function initCotizador() {
     // Altura aproximada de la cabecera (incluyendo logos y detalles). Para A4 damos más espacio
     const headerYEnd = 70;
     // Desplazamiento adicional entre la información del header y el encabezado de la tabla.
-    const tableHeaderYOffset = 6;
+    const tableHeaderYOffset = 1;
     // Posición base del encabezado de la tabla en el eje Y.
     const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
     // Espacio adicional entre el encabezado de la tabla y las filas de datos.
-    const tableBodyExtraSpacing = 3;
+    const tableBodyExtraSpacing = 13;
     // Hacer que la primera fila de contenido se posicione como si fuese la segunda fila
     // real para evitar cualquier superposición con el encabezado.
-    const tableBodySkippedRows = 1;
+    const tableBodySkippedRows = 0;
     // Punto inicial del área utilizable para filas de datos.
     const tableContentTop =
       tableHeaderYPos + tableBodyExtraSpacing + tableBodySkippedRows * rowHeight;
