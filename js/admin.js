@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Cargar tarifario base y preparar las aseguradoras fijas
   await ensureTarifarioDataset();
 
+  // Asegurar que las secciones de branding existan aunque el HTML desplegado esté desactualizado
+  ensureBrandingSections();
+
   // Renderizar vistas iniciales
   renderUsers();
   renderInsurerTariffManager();
@@ -337,6 +340,153 @@ function renderInsurerTariffManager() {
 
     listElem.appendChild(li);
   });
+}
+
+function ensureBrandingSections() {
+  const container = document.querySelector('.admin-container');
+  if (!container) {
+    return;
+  }
+
+  const logosHeading = Array.from(container.querySelectorAll('h2')).find((heading) =>
+    heading.textContent && heading.textContent.toLowerCase().includes('logos de aseguradoras')
+  );
+
+  const insertBeforeLogos = (fragment) => {
+    if (!fragment) return;
+    if (logosHeading) {
+      const parent = logosHeading.parentNode || container;
+      parent.insertBefore(fragment, logosHeading);
+    } else {
+      container.appendChild(fragment);
+    }
+  };
+
+  if (!document.getElementById('metroredLogoManager')) {
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(document.createElement('hr'));
+
+    const heading = document.createElement('h2');
+    heading.textContent = 'Logo institucional de Metrored';
+    fragment.appendChild(heading);
+
+    const description = document.createElement('p');
+    description.innerHTML =
+      'Actualice el logo principal que se muestra en el cotizador, la página web y los documentos PDF. ' +
+      'El archivo debe respetar las proporciones originales para evitar distorsiones. ' +
+      'Puede cargar imágenes en formato <strong>SVG, PNG o JPG</strong>.';
+    fragment.appendChild(description);
+
+    const block = document.createElement('div');
+    block.id = 'metroredLogoManager';
+    block.className = 'branding-block';
+
+    const preview = document.createElement('img');
+    preview.id = 'metroredLogoPreview';
+    preview.alt = 'Logo actual de Metrored';
+    preview.style.maxWidth = '260px';
+    preview.style.height = 'auto';
+    preview.style.display = 'none';
+    block.appendChild(preview);
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'metroredLogoInput';
+    input.accept = '.svg,.png,.jpg,.jpeg';
+    input.setAttribute('aria-describedby', 'metroredLogoMessage');
+    block.appendChild(input);
+
+    const actions = document.createElement('div');
+    actions.className = 'branding-actions';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.id = 'applyMetroredLogoBtn';
+    applyBtn.type = 'button';
+    applyBtn.className = 'btn btn-small';
+    applyBtn.textContent = 'Guardar logo';
+    actions.appendChild(applyBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.id = 'resetMetroredLogoBtn';
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-small';
+    resetBtn.style.backgroundColor = '#888';
+    resetBtn.textContent = 'Restaurar logo original';
+    actions.appendChild(resetBtn);
+
+    block.appendChild(actions);
+
+    const message = document.createElement('p');
+    message.id = 'metroredLogoMessage';
+    message.className = 'message';
+    block.appendChild(message);
+
+    fragment.appendChild(block);
+    insertBeforeLogos(fragment);
+  }
+
+  if (!document.getElementById('faviconManager')) {
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(document.createElement('hr'));
+
+    const heading = document.createElement('h2');
+    heading.textContent = 'Icono del sitio (favicon)';
+    fragment.appendChild(heading);
+
+    const description = document.createElement('p');
+    description.innerHTML =
+      'Cambie el ícono que se muestra en la pestaña del navegador. Utilice imágenes cuadradas en formato ' +
+      '<strong>SVG, PNG o JPG</strong> para lograr el mejor resultado.';
+    fragment.appendChild(description);
+
+    const block = document.createElement('div');
+    block.id = 'faviconManager';
+    block.className = 'branding-block';
+
+    const preview = document.createElement('img');
+    preview.id = 'faviconPreview';
+    preview.alt = 'Favicon actual';
+    preview.style.width = '48px';
+    preview.style.height = '48px';
+    preview.style.borderRadius = '8px';
+    preview.style.display = 'none';
+    block.appendChild(preview);
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'faviconInput';
+    input.accept = '.svg,.png,.jpg,.jpeg';
+    input.setAttribute('aria-describedby', 'faviconMessage');
+    block.appendChild(input);
+
+    const actions = document.createElement('div');
+    actions.className = 'branding-actions';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.id = 'applyFaviconBtn';
+    applyBtn.type = 'button';
+    applyBtn.className = 'btn btn-small';
+    applyBtn.textContent = 'Guardar favicon';
+    actions.appendChild(applyBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.id = 'resetFaviconBtn';
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-small';
+    resetBtn.style.backgroundColor = '#888';
+    resetBtn.textContent = 'Restaurar favicon original';
+    actions.appendChild(resetBtn);
+
+    block.appendChild(actions);
+
+    const message = document.createElement('p');
+    message.id = 'faviconMessage';
+    message.className = 'message';
+    block.appendChild(message);
+
+    fragment.appendChild(block);
+    insertBeforeLogos(fragment);
+  }
 }
 
 /**
