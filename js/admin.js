@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     downloadBtn.addEventListener('click', downloadLogs);
   }
 
+  const templateBtn = document.getElementById('downloadTemplateBtn');
+  if (templateBtn) {
+    templateBtn.addEventListener('click', downloadTarifarioTemplate);
+  }
+
   // Evento para agregar un nuevo tarifario
   document.getElementById('addTarifarioBtn').addEventListener('click', async () => {
     const nameInput = document.getElementById('tarifarioName');
@@ -476,6 +481,26 @@ function downloadLogs() {
     logMessage.textContent = 'Historial descargado correctamente.';
     logMessage.style.color = 'green';
   }
+}
+
+/**
+ * Genera y descarga una plantilla de tarifario en formato XLSX.
+ */
+function downloadTarifarioTemplate() {
+  if (typeof XLSX === 'undefined' || !XLSX.utils || !XLSX.writeFile) {
+    console.error('La librería XLSX no está disponible para generar la plantilla.');
+    return;
+  }
+  const header = ['DESCRIPCIÓN', 'CODIGO', 'GRUPO', 'PRECIO', 'ASEGURADORA_1', 'ASEGURADORA_2'];
+  const sampleRows = [
+    ['Hemograma completo', 'LAB001', 'Laboratorio', 25, 20, 18],
+    ['Resonancia magnética', 'IMG001', 'Imagen', 120, 90, 85],
+  ];
+  const worksheet = XLSX.utils.aoa_to_sheet([header, ...sampleRows]);
+  worksheet['!cols'] = header.map((_, idx) => ({ wch: idx === 0 ? 35 : 18 }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Tarifario');
+  XLSX.writeFile(workbook, 'plantilla_tarifario.xlsx');
 }
 
 /**

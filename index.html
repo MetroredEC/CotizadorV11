@@ -6,12 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cotizador Metrored – Iniciar sesión</title>
     <!-- Icono de pestaña -->
-    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link rel="icon" type="image/png" id="appFavicon" />
+    <script src="js/assets.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        if (window.METRORED_ASSETS) {
+          const faviconLink = document.getElementById('appFavicon');
+          if (faviconLink && window.METRORED_ASSETS.favicon) {
+            faviconLink.href = window.METRORED_ASSETS.favicon;
+          }
+          const logoImg = document.getElementById('loginLogo');
+          if (logoImg && window.METRORED_ASSETS.logo) {
+            logoImg.src = window.METRORED_ASSETS.logo;
+          }
+        }
+      });
+    </script>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
     <div class="login-container">
-      <img src="images/logo.png" alt="Logo Metrored" class="logo" />
+      <img id="loginLogo" src="" alt="Logo Metrored" class="logo" />
       <h1>Ingreso al sistema de cotizaciones</h1>
       <form id="loginForm">
         <div class="form-group">
