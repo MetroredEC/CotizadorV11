@@ -1,27 +1,33 @@
 // Vector-based assets encoded as data URIs to avoid storing binary files in the repository.
 const METRORED_LOGO_SVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
-  <rect width="320" height="120" rx="18" fill="#ffffff" />
-  <rect x="0" y="0" width="128" height="120" rx="20" fill="#d3222a" />
-  <path
-    d="M40 88V32h18l22 38 22-38h18v56h-18V67.5L80 102 58 67.5V88Z"
-    fill="#ffffff"
-  />
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="140" viewBox="0 0 360 140">
+  <defs>
+    <linearGradient id="metroredGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00a7e1" />
+      <stop offset="100%" stop-color="#0092d0" />
+    </linearGradient>
+  </defs>
+  <rect width="360" height="140" rx="16" fill="url(#metroredGradient)" />
   <text
-    x="152"
-    y="66"
-    font-family="'Montserrat', 'Arial Black', sans-serif"
-    font-size="42"
+    x="180"
+    y="72"
+    text-anchor="middle"
+    font-family="'Montserrat', 'Arial Black', 'Helvetica Neue', sans-serif"
+    font-size="60"
     font-weight="700"
-    fill="#323232"
+    letter-spacing="4"
+    fill="#ffffff"
   >METRORED</text>
+  <line x1="36" y1="96" x2="324" y2="96" stroke="#111111" stroke-width="6" stroke-linecap="round" />
   <text
-    x="152"
-    y="98"
-    font-family="'Montserrat', 'Arial', sans-serif"
-    font-size="26"
-    font-weight="500"
-    fill="#d3222a"
+    x="180"
+    y="122"
+    text-anchor="middle"
+    font-family="'Montserrat', 'Arial', 'Helvetica Neue', sans-serif"
+    font-size="28"
+    font-weight="600"
+    letter-spacing="8"
+    fill="#0f1b2b"
   >SALUD</text>
 </svg>
 `.trim();
