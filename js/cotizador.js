@@ -575,15 +575,20 @@ function initCotizador() {
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(7.5);
       doc.setFont('Helvetica', 'normal');
+      const footerTop = pageHeight - footerHeight + 4;
       // Número de página
-      doc.text(`Página ${pageNum} de ${totalPages}`, margin, pageHeight - 8);
+      const pageNumberY = footerTop + 3;
+      doc.text(`Página ${pageNum} de ${totalPages}`, margin, pageNumberY);
       // Texto legal (varias líneas si es necesario)
-      const legal = 'Esta cotización tiene carácter informativo y no constituye una oferta o compromiso de venta. Los valores presentados son referenciales y podrán variar según la validación de las condiciones de seguros y coberturas al momento del pago en caja.';
+      const legal =
+        'Esta cotización tiene carácter informativo y no constituye una oferta o compromiso de venta. Los valores presentados son referenciales y podrán variar según la validación de las condiciones de seguros y coberturas al momento del pago en caja.';
       const maxWidth = pageWidth - 2 * margin - 60;
-      // Ajustar texto legal en varias líneas
+      // Ajustar texto legal en varias líneas y mantenerlas dentro del alto del footer
       const legalLines = doc.splitTextToSize(legal, maxWidth);
-      const legalY = pageHeight - 8;
-      doc.text(legalLines, pageWidth - margin - maxWidth, legalY, { align: 'left' });
+      const legalYStart = footerTop + 3;
+      doc.text(legalLines, pageWidth - margin - maxWidth, legalYStart, {
+        align: 'left',
+      });
     }
     // Función para truncar texto y añadir puntos suspensivos. Se usa para la descripción
     const ellipsis = (s, max) => (s && s.length > max ? s.slice(0, max - 1) + '…' : (s || ''));
