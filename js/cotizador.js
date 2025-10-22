@@ -391,6 +391,34 @@ function initCotizador() {
         insurerLogoDataUrl = logoFromTarifario;
       }
     }
+    // Obtener dimensiones reales de los logos para respetar la relación de aspecto al escalarlos
+    const metroLogoNaturalSize = await getImageDimensions(metroLogoDataUrl).catch(() => null);
+    const insurerLogoNaturalSize = insurerLogoDataUrl
+      ? await getImageDimensions(insurerLogoDataUrl).catch(() => null)
+      : null;
+    const metroLogoTargetWidth = 23 * 1.25; // 25% más ancho que el tamaño original
+    const metroLogoWidth = metroLogoTargetWidth;
+    const metroLogoHeight = metroLogoNaturalSize
+      ? parseFloat(
+          ((metroLogoNaturalSize.height / metroLogoNaturalSize.width) * metroLogoTargetWidth).toFixed(2)
+        )
+      : 7 * 1.25;
+    let insurerLogoWidth = null;
+    let insurerLogoHeight = null;
+    if (insurerLogoDataUrl) {
+      if (insurerLogoNaturalSize) {
+        const maxWidth = metroLogoWidth;
+        const maxHeight = metroLogoHeight;
+        const widthScale = maxWidth / insurerLogoNaturalSize.width;
+        const heightScale = maxHeight / insurerLogoNaturalSize.height;
+        const insurerScale = Math.min(widthScale, heightScale);
+        insurerLogoWidth = parseFloat((insurerLogoNaturalSize.width * insurerScale).toFixed(2));
+        insurerLogoHeight = parseFloat((insurerLogoNaturalSize.height * insurerScale).toFixed(2));
+      } else {
+        insurerLogoWidth = metroLogoWidth;
+        insurerLogoHeight = metroLogoHeight;
+      }
+    }
     // Definiciones de layout
     // Altura de cada fila en la tabla. Para A4 usamos filas más altas para evitar superposiciones
     // Aumentamos ligeramente la altura para garantizar que el encabezado de la tabla
@@ -419,11 +447,24 @@ function initCotizador() {
     // Primer margen para header y espacio después del header (deja lugar para detalles y encabezado de tabla)
     // Altura aproximada de la cabecera (incluyendo logos y detalles). Para A4 damos más espacio
     const headerYEnd = 70;
+    // Desplazamiento adicional entre la información del header y el encabezado de la tabla.
+    const tableHeaderYOffset = 6;
+    // Posición base del encabezado de la tabla en el eje Y.
+    const tableHeaderYPos = headerYEnd + tableHeaderYOffset;
+    // Espacio adicional entre el encabezado de la tabla y las filas de datos.
+    const tableBodyExtraSpacing = 3;
+    // Hacer que la primera fila de contenido se posicione como si fuese la segunda fila
+    // real para evitar cualquier superposición con el encabezado.
+    const tableBodySkippedRows = 1;
+    // Punto inicial del área utilizable para filas de datos.
+    const tableContentTop =
+      tableHeaderYPos + tableBodyExtraSpacing + tableBodySkippedRows * rowHeight;
     // Altura del pie de página para número de página y textos legales en A4
     const footerHeight = 20;
-    const availableHeightNoSummary = pageHeight - headerYEnd - footerHeight;
+    const availableHeightNoSummary = pageHeight - tableContentTop - footerHeight;
     const maxRowsNoSummary = Math.floor(availableHeightNoSummary / rowHeight);
-    const availableHeightWithSummary = pageHeight - headerYEnd - footerHeight - resumenHeight;
+    const availableHeightWithSummary =
+      pageHeight - tableContentTop - footerHeight - resumenHeight;
     const maxRowsWithSummary = Math.floor(availableHeightWithSummary / rowHeight);
     // Distribuir filas entre páginas
     const filas = cart.map((it) => it);
@@ -444,25 +485,28 @@ function initCotizador() {
       // No dibujar marco exterior para formato A4
       // Logos
       // Logo de Metrored a la izquierda
-      // Ajustar el tamaño de los logos para que no se aplasten.  Usamos proporciones más
-      // pequeñas y mantenemos una relación aproximada 3:1 (ancho:alto).  Al reducir
-      // el tamaño se mejora la calidad visual del PDF.
-      const logoW = 23;
-      const logoH = 7;
       const logoY = margin + 2;
-      doc.addImage(metroLogoDataUrl, 'PNG', margin, logoY, logoW, logoH);
+      doc.addImage(metroLogoDataUrl, 'PNG', margin, logoY, metroLogoWidth, metroLogoHeight);
       // Logo del seguro a la derecha si existe
-      if (insurerLogoDataUrl) {
-        doc.addImage(insurerLogoDataUrl, 'PNG', pageWidth - margin - logoW, logoY, logoW, logoH);
+      if (insurerLogoDataUrl && insurerLogoWidth && insurerLogoHeight) {
+        doc.addImage(
+          insurerLogoDataUrl,
+          'PNG',
+          pageWidth - margin - insurerLogoWidth,
+          logoY,
+          insurerLogoWidth,
+          insurerLogoHeight
+        );
       }
+      const logosMaxHeight = Math.max(metroLogoHeight, insurerLogoHeight || 0);
       // Título centrado con tamaño de letra mayor para A4
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(20);
-      doc.text('COTIZACIÓN', pageWidth / 2, logoY + logoH + 10, { align: 'center' });
+      doc.text('COTIZACIÓN', pageWidth / 2, logoY + logosMaxHeight + 10, { align: 'center' });
       // Detalles de cliente y cotización en dos columnas. Fuente ligeramente más grande en A4
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(9);
-      let infoY = logoY + logoH + 14;
+      let infoY = logoY + logosMaxHeight + 14;
       const col1X = margin;
       const col2X = pageWidth / 2 + 4;
       // Primera fila
@@ -486,7 +530,7 @@ function initCotizador() {
       doc.setDrawColor(200, 200, 200);
       doc.line(margin, yLine, pageWidth - margin, yLine);
       // Encabezado de la tabla
-      const tableHeaderY = headerYEnd;
+      const tableHeaderY = tableHeaderYPos;
       const headerLabels = ['Código', 'Descripción', 'PVP', 'PVA', 'Cant.', 'Subtotal'];
       // Anchuras de columna adaptadas a formato A4 (suma 190 mm):
       // Código, Descripción, PVP, PVA, Cant., Subtotal
@@ -550,9 +594,11 @@ function initCotizador() {
       }
       drawHeader();
       // Y inicial para la primera fila de datos en esta página
-      // La primera fila de datos comienza una fila por debajo del encabezado de la tabla.
-      // Sumamos un pequeño margen adicional (1 mm) para evitar cualquier solapamiento con textos altos.
-      let yPos = headerYEnd + rowHeight + 1;
+      // La primera fila de datos comienza después de omitir explícitamente varias filas adicionales.
+      // Sumamos el espacio adicional configurable y el número de filas omitidas para
+      // garantizar que el contenido real arranque desde la "cuarta" fila visual.
+      let yPos =
+        tableHeaderYPos + tableBodyExtraSpacing + (tableBodySkippedRows + 1) * rowHeight;
       const rowsInPage = pageRows[p];
       // Dibujar filas
       doc.setFontSize(9);
@@ -605,7 +651,8 @@ function initCotizador() {
           doc.addPage();
           pageNum++;
           drawHeader();
-          summaryY = headerYEnd + rowHeight + 4;
+          summaryY =
+            tableHeaderYPos + tableBodyExtraSpacing + (tableBodySkippedRows + 1) * rowHeight + 4;
         }
         // Construir líneas de resumen: Subtotal, Copago (si aplica) y Total
         const summaryLines = [];
@@ -696,4 +743,20 @@ function toDataURL(url) {
           reader.readAsDataURL(blob);
         })
     );
+}
+
+/**
+ * Obtiene las dimensiones reales de una imagen a partir de un DataURL.
+ * @param {string} dataUrl
+ * @returns {Promise<{width: number, height: number}>}
+ */
+function getImageDimensions(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = (error) => reject(error);
+    img.src = dataUrl;
+  });
 }
