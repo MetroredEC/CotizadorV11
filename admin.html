@@ -7,14 +7,29 @@
     <title>Administrador – Tarifarios Metrored</title>
     <link rel="stylesheet" href="css/style.css" />
     <!-- Icono de pestaña -->
-    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link rel="icon" type="image/svg+xml" id="appFavicon" />
+    <script src="js/assets.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        if (window.METRORED_ASSETS) {
+          const faviconLink = document.getElementById('appFavicon');
+          if (faviconLink && window.METRORED_ASSETS.favicon) {
+            faviconLink.href = window.METRORED_ASSETS.favicon;
+          }
+          const logoImg = document.getElementById('adminLogo');
+          if (logoImg && window.METRORED_ASSETS.logo) {
+            logoImg.src = window.METRORED_ASSETS.logo;
+          }
+        }
+      });
+    </script>
     <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   </head>
   <body>
     <div class="admin-container">
       <div class="header" style="justify-content: space-between;">
-        <img src="images/logo.png" alt="Logo Metrored" class="logo" />
+        <img id="adminLogo" src="" alt="Logo Metrored" class="logo" />
         <div>
           <span id="adminGreeting"></span>
           <button id="adminLogout" class="btn" style="margin-left:10px;">Salir</button>
@@ -22,34 +37,88 @@
       </div>
       <h1>Gestión de tarifarios y sistema</h1>
       <p>
-        Para añadir un tarifario nuevo, asigne un nombre descriptivo, seleccione
-        el archivo Excel (.xlsx) con las columnas <strong>DESCRIPCIÓN, CODIGO,
-        GRUPO, PRECIO</strong> y una columna por aseguradora, y opcionalmente
-        suba un logo (PNG) que se utilizará en el PDF de cotizaciones.
-        Si necesita un ejemplo, descargue la
-        <a href="data/plantilla_tarifario.xlsx" download>plantilla de tarifario</a>.
+        Las aseguradoras disponibles en Metrored son fijas. Desde aquí puede subir el
+        archivo Excel (.xlsx) que contiene los valores negociados para cada una. Cada
+        archivo debe incluir las columnas <strong>CODIGO, DESCRIPCIÓN, GRUPO, PRECIO</strong>
+        y una columna <strong>TARIFA</strong> con el valor de la aseguradora. Los exámenes
+        nuevos se añadirán automáticamente al tarifario general.
       </p>
-      <div class="form-group">
-        <label for="tarifarioName">Nombre del tarifario</label>
-        <input type="text" id="tarifarioName" placeholder="Ej.: Tarifario General 2025" />
-      </div>
-      <div class="form-group">
-        <label for="tarifarioFile">Archivo de tarifario (.xlsx)</label>
-        <input type="file" id="tarifarioFile" accept=".xlsx" />
-      </div>
-      <div class="form-group">
-        <label for="logoFile">Logo del seguro (PNG, opcional)</label>
-        <input type="file" id="logoFile" accept=".png" />
-      </div>
-      <button id="addTarifarioBtn" class="btn">Agregar tarifario</button>
-      <p id="uploadMessage" class="message"></p>
+      <button type="button" id="downloadTemplateBtn" class="btn btn-small">
+        Descargar plantilla base
+      </button>
+      <p class="message" id="tarifarioUploadMessage"></p>
+      <h2>Tarifarios por aseguradora</h2>
+      <ul id="insurerTarifarioList" class="tarifario-list"></ul>
       <hr />
-      <h2>Tarifarios cargados</h2>
+      <h2>Logo institucional de Metrored</h2>
       <p>
-        Los tarifarios cargados se muestran a continuación; puede activar uno para que sea utilizado en el cotizador, eliminar los
-        que estén obsoletos y subir o cambiar el logo asociado a cada uno. El logo se mostrará en el encabezado del PDF.
+        Actualice el logo principal que se muestra en el cotizador, la página web y los
+        documentos PDF. El archivo debe respetar las proporciones originales para evitar
+        distorsiones. Puede cargar imágenes en formato <strong>SVG, PNG o JPG</strong>.
       </p>
-      <ul id="tarifariosList"></ul>
+      <div id="metroredLogoManager" class="branding-block">
+        <img
+          id="metroredLogoPreview"
+          alt="Logo actual de Metrored"
+          style="max-width: 260px; height: auto; display: none;"
+        />
+        <input
+          type="file"
+          id="metroredLogoInput"
+          accept=".svg,.png,.jpg,.jpeg"
+          aria-describedby="metroredLogoMessage"
+        />
+        <div class="branding-actions">
+          <button id="applyMetroredLogoBtn" type="button" class="btn btn-small">
+            Guardar logo
+          </button>
+          <button
+            id="resetMetroredLogoBtn"
+            type="button"
+            class="btn btn-small"
+            style="background-color: #888;"
+          >
+            Restaurar logo original
+          </button>
+        </div>
+        <p id="metroredLogoMessage" class="message"></p>
+      </div>
+
+     <h2>Logo favicon de Metrored</h2>
+      <hr />
+      <h2>Icono del sitio (favicon)</h2>
+      <p>
+        Cambie el ícono que se muestra en la pestaña del navegador. Utilice imágenes
+        cuadradas en formato <strong>SVG, PNG o JPG</strong> para lograr el mejor resultado.
+      </p>
+      <div id="faviconManager" class="branding-block">
+        <img
+          id="faviconPreview"
+          alt="Favicon actual"
+          style="width: 48px; height: 48px; border-radius: 8px; display: none;"
+        />
+        <input
+          type="file"
+          id="faviconInput"
+          accept=".svg,.png,.jpg,.jpeg"
+          aria-describedby="faviconMessage"
+        />
+        <div class="branding-actions">
+          <button id="applyFaviconBtn" type="button" class="btn btn-small">
+            Guardar favicon
+          </button>
+          <button
+            id="resetFaviconBtn"
+            type="button"
+            class="btn btn-small"
+            style="background-color: #888;"
+          >
+            Restaurar favicon original
+          </button>
+        </div>
+        <p id="faviconMessage" class="message"></p>
+      </div>
+
       <hr />
       <h2>Logos de aseguradoras</h2>
       <p>

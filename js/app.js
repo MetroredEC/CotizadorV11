@@ -22,6 +22,7 @@ async function loadTarifario() {
       localStorage.removeItem('tarifarioData');
     }
   }
+
   if (!appState.data) {
     // Cargar desde el archivo por defecto
     try {
@@ -32,10 +33,28 @@ async function loadTarifario() {
       }
       appState.data = await response.json();
     } catch (err) {
-      console.warn('Fallo al cargar data/tarifario.json, se requiere subir un tarifario mediante la página de administración.', err);
+      console.warn(
+        'Fallo al cargar data/tarifario.json, se requiere subir un tarifario mediante la página de administración.',
+        err,
+      );
       appState.data = null;
     }
   }
+
+  if (!appState.data || typeof appState.data !== 'object') {
+    appState.data = { aseguradoras: ['Particular'], examenes: [] };
+  }
+
+  if (!Array.isArray(appState.data.aseguradoras)) {
+    appState.data.aseguradoras = ['Particular'];
+  } else if (!appState.data.aseguradoras.includes('Particular')) {
+    appState.data.aseguradoras = ['Particular', ...appState.data.aseguradoras];
+  }
+
+  if (!Array.isArray(appState.data.examenes)) {
+    appState.data.examenes = [];
+  }
+
   appState.aseguradoras = appState.data.aseguradoras;
   appState.examenes = appState.data.examenes;
 }
