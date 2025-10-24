@@ -11,12 +11,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Icono de pestaña -->
-    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link rel="icon" type="image/svg+xml" id="appFavicon" />
+    <script src="js/assets.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        if (window.METRORED_ASSETS) {
+          const faviconLink = document.getElementById('appFavicon');
+          if (faviconLink && window.METRORED_ASSETS.favicon) {
+            faviconLink.href = window.METRORED_ASSETS.favicon;
+          }
+          const logoImg = document.getElementById('cotizadorLogo');
+          if (logoImg && window.METRORED_ASSETS.logo) {
+            logoImg.src = window.METRORED_ASSETS.logo;
+          }
+        }
+      });
+    </script>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <img src="images/logo.png" alt="Logo Metrored" class="logo" />
+        <img id="cotizadorLogo" src="" alt="Logo Metrored" class="logo" />
         <div class="user-actions">
           <span id="userGreeting"></span>
           <button id="logoutBtn" class="btn" style="margin-left: 10px;">Salir</button>
@@ -72,6 +87,7 @@
                 <th>Descripción</th>
                 <th>PVP</th>
                 <th>PVA</th>
+                <th>Copago</th>
                 <th>Cant.</th>
                 <th>Total</th>
                 <th></th>
@@ -87,16 +103,24 @@
         <h2>Resumen</h2>
         <div class="summary-table" id="summary">
           <div class="summary-row">
-            <div class="summary-label">Subtotal</div>
-            <div class="summary-value" id="subtotal">0.00</div>
+            <div class="summary-label">Subtotal PVP</div>
+            <div class="summary-value" id="subtotalPvp">0.00</div>
+          </div>
+          <div class="summary-row">
+            <div class="summary-label">Subtotal PVA</div>
+            <div class="summary-value" id="subtotalPva">0.00</div>
           </div>
           <!-- Copago referencial: indica el porcentaje no cubierto y el monto correspondiente. Esta fila se oculta para particulares -->
           <div class="summary-row" id="copagoSummary" style="display:none;">
             <div class="summary-label">Copago referencial (<span id="copagoPerc">20</span>%)</div>
             <div class="summary-value" id="copagoAmount">0.00</div>
           </div>
+          <div class="summary-row" id="noCoverageSummary" style="display:none;">
+            <div class="summary-label">Total sin cobertura</div>
+            <div class="summary-value" id="noCoverageAmount">0.00</div>
+          </div>
           <div class="summary-row summary-total">
-            <div class="summary-label">Total</div>
+            <div class="summary-label">Total a pagar</div>
             <div class="summary-value" id="totalAmount">0.00</div>
           </div>
         </div>
