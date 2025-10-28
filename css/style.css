@@ -224,6 +224,17 @@ a:hover {
   text-align: right;
 }
 
+.items-table td.coverage-toggle-cell {
+  text-align: center;
+}
+
+.coverage-toggle-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.2;
+}
+
 .items-table tr.manual-no-coverage td {
   background-color: #fff4e5;
 }
