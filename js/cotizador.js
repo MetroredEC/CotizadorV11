@@ -772,8 +772,8 @@ function initCotizador() {
       { key: 'description', label: 'Descripción', width: 68, align: 'left' },
       { key: 'pvp', label: 'PVP', width: 16, align: 'right' },
       { key: 'pva', label: 'PVA', width: 16, align: 'right' },
-      { key: 'copagoPercent', label: 'Copago indiv. (%)', width: 22, align: 'right' },
-      { key: 'copagoAmount', label: 'Copago paciente', width: 22, align: 'right' },
+      { key: 'copagoPercent', label: 'Cop. %', width: 22, align: 'right' },
+      { key: 'copagoAmount', label: 'Cop. $', width: 22, align: 'right' },
       { key: 'quantity', label: 'Cant.', width: 12, align: 'right' },
       { key: 'subtotal', label: 'Total paciente', width: 16, align: 'right' },
     ];
