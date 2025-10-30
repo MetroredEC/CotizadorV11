@@ -38,21 +38,9 @@
         </div>
       </div>
       <!-- Contenido principal dispuesto en una sola columna para mejorar la experiencia de uso -->
-      <!-- Información del cliente y aseguradora -->
+      <!-- Información de aseguradora y cobertura -->
       <div class="section">
-        <h2>Información del cliente</h2>
-        <div class="client-row">
-          <div class="form-group">
-            <label for="clientName">Nombre completo</label>
-            <input type="text" id="clientName" required />
-          </div>
-          <div class="form-group">
-            <label for="clientCedula">Cédula</label>
-            <input type="text" id="clientCedula" required />
-            <p id="cedulaError" class="error-message"></p>
-          </div>
-        </div>
-        <!-- Aseguradora y cobertura se muestran en la misma fila para ahorrar espacio -->
+        <h2>Aseguradora y cobertura</h2>
         <div class="inline-fields">
           <div class="form-group">
             <label for="aseguradoraSelect">Aseguradora</label>
@@ -87,9 +75,11 @@
                 <th>Descripción</th>
                 <th>PVP</th>
                 <th>PVA</th>
-                <th>Copago (%)</th>
+                <th>Copago indiv. (%)</th>
+                <th>Copago paciente</th>
+                <th>Sin cobertura</th>
                 <th>Cant.</th>
-                <th>Total</th>
+                <th>Total paciente</th>
                 <th></th>
               </tr>
             </thead>
@@ -98,7 +88,7 @@
           <p id="noItemsMsg">No hay exámenes añadidos.</p>
         </div>
       </div>
-      <!-- Resumen de totales y generación de PDF -->
+      <!-- Resumen de totales -->
       <div class="section">
         <h2>Resumen</h2>
         <div class="summary-table" id="summary">
@@ -124,7 +114,22 @@
             <div class="summary-value" id="totalAmount">0.00</div>
           </div>
         </div>
-        <div style="margin-top: 10px;">
+      </div>
+      <!-- Datos del cliente para emisión del PDF -->
+      <div class="section">
+        <h2>Datos para emisión</h2>
+        <div class="client-row">
+          <div class="form-group">
+            <label for="clientName">Nombre completo</label>
+            <input type="text" id="clientName" required />
+          </div>
+          <div class="form-group">
+            <label for="clientCedula">Cédula</label>
+            <input type="text" id="clientCedula" required />
+            <p id="cedulaError" class="error-message"></p>
+          </div>
+        </div>
+        <div class="pdf-actions">
           <button id="generatePdf" class="btn">Generar PDF</button>
           <p id="generateError" class="error-message"></p>
         </div>
