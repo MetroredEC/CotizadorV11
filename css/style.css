@@ -224,6 +224,17 @@ a:hover {
   text-align: right;
 }
 
+.items-table td.coverage-toggle-cell {
+  text-align: center;
+}
+
+.coverage-toggle-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.2;
+}
+
 .items-table tr.manual-no-coverage td {
   background-color: #fff4e5;
 }
@@ -246,6 +257,7 @@ a:hover {
 .client-row {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .client-row .form-group {
@@ -260,6 +272,19 @@ a:hover {
 
 .inline-fields .form-group {
   flex: 1;
+}
+
+.pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.pdf-actions .error-message {
+  margin: 0;
+  height: auto;
 }
 
 /* Tabla/resumen visual en el resumen de cotización */
