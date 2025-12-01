@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cotizador Metrored – Iniciar sesión</title>
-    <!-- Icono de pestaña -->
+    <title>Panel Metrored</title>
     <link rel="icon" type="image/svg+xml" id="appFavicon" />
     <script src="js/assets.js"></script>
     <script>
@@ -15,34 +14,165 @@
           if (faviconLink && window.METRORED_ASSETS.favicon) {
             faviconLink.href = window.METRORED_ASSETS.favicon;
           }
-          const logoImg = document.getElementById('loginLogo');
-          if (logoImg && window.METRORED_ASSETS.logo) {
-            logoImg.src = window.METRORED_ASSETS.logo;
-          }
         }
       });
     </script>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <div class="login-container">
-      <img id="loginLogo" src="" alt="Logo Metrored" class="logo" />
-      <h1>Ingreso al sistema de cotizaciones</h1>
-      <form id="loginForm">
-        <div class="form-group">
-          <label for="username">Usuario</label>
-          <input type="text" id="username" name="username" required />
+    <header class="topbar">
+      <div class="brand">
+        <h1>Metrored</h1>
+        <p id="sessionStatus" class="session-status">No autenticado</p>
+      </div>
+      <div class="session-meta">
+        <div class="user-info">
+          <div id="userFullName" class="user-name"></div>
+          <div id="userRole" class="user-role"></div>
         </div>
-        <div class="form-group">
-          <label for="password">Contraseña</label>
-          <input type="password" id="password" name="password" required />
+        <div class="role-selector">
+          <label for="roleSelect">Rol activo</label>
+          <select id="roleSelect"></select>
         </div>
-        <button type="submit" class="btn">Ingresar</button>
-      </form>
-      <p id="loginError" class="error-message"></p>
-    </div>
+        <button id="logoutBtn" class="btn btn-ghost">Cerrar sesión</button>
+      </div>
+    </header>
 
-    <script src="js/app.js"></script>
-    <script src="js/login.js"></script>
+    <nav class="tabs" id="mainTabs">
+      <button class="tab" data-section="dashboard">Dashboard</button>
+      <button class="tab" data-section="audit">Auditoría</button>
+      <button class="tab" data-section="medicos">Médicos</button>
+      <button class="tab" data-section="admin">Admin</button>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="panel-section">
+        <h2>Dashboard</h2>
+        <div class="cards">
+          <div class="card">
+            <p class="card-label">Cotizaciones hoy</p>
+            <p class="card-value">18</p>
+            <p class="card-foot">+3 vs ayer</p>
+          </div>
+          <div class="card">
+            <p class="card-label">Cobertura promedio</p>
+            <p class="card-value">82%</p>
+            <p class="card-foot">Ref. últimos 7 días</p>
+          </div>
+          <div class="card">
+            <p class="card-label">Copago medio</p>
+            <p class="card-value">$23.40</p>
+            <p class="card-foot">Pacientes particulares</p>
+          </div>
+        </div>
+        <div class="grid two-cols">
+          <div class="panel">
+            <h3>Alertas rápidas</h3>
+            <ul>
+              <li>3 pólizas sin cobertura cargadas recientemente.</li>
+              <li>Actualización pendiente del tarifario de Seguros Vida.</li>
+              <li>Los valores de laboratorio se mantienen dentro del objetivo.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Tareas sugeridas</h3>
+            <ol>
+              <li>Revisar copagos manuales superiores a $50.</li>
+              <li>Validar pacientes con historial de auditorías.</li>
+              <li>Confirmar actualización de médicos de la red.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="audit" class="panel-section">
+        <h2>Auditoría</h2>
+        <div class="panel">
+          <label for="auditHistory">Historia clínica</label>
+          <select id="auditHistory">
+            <option>HC-10231 – Pérez, Ana</option>
+            <option>HC-10254 – Jiménez, Carla</option>
+            <option>HC-10312 – López, David</option>
+          </select>
+        </div>
+        <div class="panel">
+          <h3>Revisión de criterios</h3>
+          <div class="criteria-list">
+            <div class="criterion">
+              <span>Documentación completa</span>
+              <div class="criterion-actions">
+                <button class="btn btn-small">Cumple</button>
+                <button class="btn btn-small btn-secondary">No cumple</button>
+              </div>
+            </div>
+            <div class="criterion">
+              <span>Coherencia diagnóstica</span>
+              <div class="criterion-actions">
+                <button class="btn btn-small">Cumple</button>
+                <button class="btn btn-small btn-secondary">No cumple</button>
+              </div>
+            </div>
+            <div class="criterion">
+              <span>Autorización vigente</span>
+              <div class="criterion-actions">
+                <button class="btn btn-small">Cumple</button>
+                <button class="btn btn-small btn-secondary">No cumple</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="medicos" class="panel-section">
+        <h2>Médicos</h2>
+        <div class="panel">
+          <table class="table-simple">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Especialidad</th>
+                <th>Score global</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Dr. Julio Andrade</td>
+                <td>Cardiología</td>
+                <td>89</td>
+              </tr>
+              <tr>
+                <td>Dra. Mónica Mera</td>
+                <td>Pediatría</td>
+                <td>93</td>
+              </tr>
+              <tr>
+                <td>Dr. Alan Cabrera</td>
+                <td>Medicina Interna</td>
+                <td>86</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="admin" class="panel-section">
+        <h2>Admin</h2>
+        <div class="grid two-cols">
+          <div class="panel">
+            <h3>Gestión de usuarios</h3>
+            <p>Desde aquí podrás crear, desactivar o ajustar roles de los usuarios del sistema.</p>
+            <p class="placeholder">(Contenido en construcción)</p>
+          </div>
+          <div class="panel">
+            <h3>Carga de datos</h3>
+            <p>Sube tarifarios, listas de médicos o configuraciones especiales.</p>
+            <p class="placeholder">(Disponible próximamente)</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script src="js/index.js"></script>
   </body>
 </html>
