@@ -11,7 +11,7 @@ const USERS = [
     roles: ['admin'],
   },
   {
-    username: 'mvargas',
+    username: 'cajas',
     password: 'Metrored2025',
     prefix: 'Lic.',
     firstName: 'María',
