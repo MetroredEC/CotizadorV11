@@ -44,14 +44,26 @@ function buildFullName(user) {
 }
 
 /**
+ * Normaliza el usuario para comparar sin importar mayúsculas.
+ * @param {string} username
+ * @returns {string}
+ */
+function normalizeUsername(username) {
+  return (username || '').trim().toLowerCase();
+}
+
+/**
  * Valida las credenciales contra el arreglo USERS.
  * @param {string} username
  * @param {string} password
  * @returns {Object|null} Datos del usuario autenticado o null si falló.
  */
 function authenticate(username, password) {
+  const normalizedUsername = normalizeUsername(username);
   const user = USERS.find(
-    (candidate) => candidate.username === username && candidate.password === password,
+    (candidate) =>
+      normalizeUsername(candidate.username) === normalizedUsername &&
+      candidate.password === password,
   );
   if (!user) return null;
 

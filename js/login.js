@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   const errorElem = document.getElementById('loginError');
 
+  if (!loginForm || !errorElem) {
+    return;
+  }
+
   loginForm.addEventListener('submit', (event) => {
     event.preventDefault();
     errorElem.textContent = '';
