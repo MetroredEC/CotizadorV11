@@ -302,7 +302,6 @@ function initCotizador() {
       const tr = document.createElement('tr');
       tr.classList.toggle('manual-no-coverage', hasInsurer && !!item.manualCopagoRemoved);
       const exam = appState.examenes.find((e) => e.codigo === item.codigo);
-      const pvp = exam ? parseFloat(exam.precio) : item.priceUnit;
       let pva = null;
       const currentAseg = aseguradoraSelect.value;
       if (currentAseg && currentAseg !== 'Particular' && exam && exam.tarifas) {
@@ -328,10 +327,6 @@ function initCotizador() {
       const tdDesc = document.createElement('td');
       tdDesc.textContent = item.descripcion;
       tr.appendChild(tdDesc);
-
-      const tdPvp = document.createElement('td');
-      tdPvp.textContent = formatCurrency(pvp);
-      tr.appendChild(tdPvp);
 
       const tdPva = document.createElement('td');
       tdPva.textContent = (pva != null) ? formatCurrency(pva) : '-';
@@ -580,11 +575,7 @@ function initCotizador() {
       // Validar campos
       const clientName = clientNameInput.value.trim();
       const clientCedula = clientCedulaInput.value.trim();
-      if (!clientName) {
-        generateError.textContent = 'Ingrese el nombre del cliente';
-        return;
-      }
-      if (!validarCedula(clientCedula)) {
+      if (clientCedula && !validarCedula(clientCedula)) {
         generateError.textContent = 'Número de cédula inválido';
         return;
       }
@@ -597,7 +588,6 @@ function initCotizador() {
       const totals = calculateSummaryTotals();
       const coverage = totals.coverage != null ? totals.coverage : 0;
       const copagoPercent = totals.hasInsurer ? totals.copagoPercent : 0;
-      const subtotalPvp = totals.subtotalPvp;
       const subtotalPva = totals.subtotalPva;
       const total = totals.totalPagar;
       const copagoReferencial = totals.hasInsurer ? totals.copagoReferencial : 0;
@@ -696,12 +686,11 @@ function initCotizador() {
     const headerBottomPadding = 12;
     const tableColumns = [
       { key: 'code', label: 'Código', width: 24, align: 'left' },
-      { key: 'description', label: 'Descripción', width: 78, align: 'left' },
-      { key: 'pvp', label: 'PVP', width: 18, align: 'right' },
+      { key: 'description', label: 'Descripción', width: 90, align: 'left' },
       { key: 'pva', label: 'PVA', width: 18, align: 'right' },
       { key: 'copago', label: 'Copago (%)', width: 24, align: 'right' },
       { key: 'quantity', label: 'Cant.', width: 12, align: 'right' },
-      { key: 'subtotal', label: 'Subtotal', width: 16, align: 'right' },
+      { key: 'subtotal', label: 'Subtotal', width: 22, align: 'right' },
     ];
     const colWidths = tableColumns.map((col) => col.width);
     const tableTotalWidth = colWidths.reduce((acc, val) => acc + val, 0);
@@ -799,8 +788,8 @@ function initCotizador() {
       const col1X = margin;
       const col2X = pageWidth / 2 + 4;
       // Primera fila
-      doc.text(`Cliente: ${clientName}`, col1X, infoY);
-      doc.text(`Cédula: ${clientCedula}`, col2X, infoY);
+      doc.text(`Cliente: ${clientName || 'No especificado'}`, col1X, infoY);
+      doc.text(`Cédula: ${clientCedula || 'No especificada'}`, col2X, infoY);
       infoY += detailLineSpacing;
       // Segunda fila: aseguradora y copago/cobertura
       doc.text(`Aseguradora: ${aseguradora}`, col1X, infoY);
@@ -887,7 +876,6 @@ function initCotizador() {
         const item = cart[filaIndex];
         // Encontrar examen original para precios
         const exam = appState.examenes.find((e) => e.codigo === item.codigo);
-        const pvp = exam ? parseFloat(exam.precio) : item.priceUnit;
         let pva = '';
         if (aseguradora !== 'Particular') {
           const val = exam && exam.tarifas ? exam.tarifas[aseguradora] : null;
@@ -915,7 +903,6 @@ function initCotizador() {
         const rowValuesByKey = {
           code: item.codigo,
           description: desc,
-          pvp: formatCurrency(pvp),
           pva: pva === '' ? '-' : formatCurrency(pva),
           copago: copagoDisplay,
           quantity: item.cantidad.toString(),
@@ -953,7 +940,6 @@ function initCotizador() {
         }
         // Construir líneas de resumen con los nuevos totales solicitados
         const summaryLines = [];
-        summaryLines.push(['Subtotal PVP', formatCurrency(subtotalPvp)]);
         summaryLines.push(['Subtotal PVA', formatCurrency(subtotalPva)]);
         if (totals.hasInsurer) {
           summaryLines.push([
@@ -1010,7 +996,7 @@ function initCotizador() {
     const m = String(today.getMonth() + 1).padStart(2, '0');
     const y = String(today.getFullYear()).slice(-2);
     const dateStr = `${d}-${m}-${y}`;
-    const safeName = clientName.replace(/\s+/g, '_');
+    const safeName = clientName ? clientName.replace(/\s+/g, '_') : 'Sin_nombre';
     const fileName = `Cotización_${safeName}_${dateStr}.pdf`;
     doc.save(fileName);
 
