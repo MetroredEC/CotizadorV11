@@ -37,6 +37,33 @@
           <button id="logoutBtn" class="btn" style="margin-left: 10px;">Salir</button>
         </div>
       </div>
+      <!-- Información del cliente y aseguradora -->
+      <div class="section">
+        <h2>Información del cliente</h2>
+        <div class="client-row">
+          <div class="form-group">
+            <label for="clientName">Nombre completo</label>
+            <input type="text" id="clientName" />
+          </div>
+          <div class="form-group">
+            <label for="clientCedula">Cédula</label>
+            <input type="text" id="clientCedula" />
+            <p id="cedulaError" class="error-message"></p>
+          </div>
+        </div>
+        <!-- Aseguradora y cobertura se muestran en la misma fila para ahorrar espacio -->
+        <div class="inline-fields">
+          <div class="form-group">
+            <label for="aseguradoraSelect">Aseguradora</label>
+            <select id="aseguradoraSelect"></select>
+          </div>
+          <div class="form-group" id="coverageGroup" style="display:none;">
+            <!-- Input de cobertura: por defecto 80 %. El asesor puede modificarlo para recalcular el copago. -->
+            <label for="coverageInput">Cobertura referencial (%)</label>
+            <input type="number" id="coverageInput" min="0" max="100" step="1" value="80" />
+          </div>
+        </div>
+      </div>
       <!-- Contenido principal dispuesto en una sola columna para mejorar la experiencia de uso -->
       <!-- Búsqueda de exámenes -->
       <div class="section">
@@ -59,7 +86,7 @@
                 <th>Código</th>
                 <th>Descripción</th>
                 <th>PVA</th>
-                <th>Copago (%)</th>
+                <th>Copago ($)</th>
                 <th>Cant.</th>
                 <th>Total</th>
                 <th></th>
@@ -99,33 +126,6 @@
         <div style="margin-top: 10px;">
           <button id="generatePdf" class="btn">Generar PDF</button>
           <p id="generateError" class="error-message"></p>
-        </div>
-      </div>
-      <!-- Información del cliente y aseguradora -->
-      <div class="section">
-        <h2>Información del cliente</h2>
-        <div class="client-row">
-          <div class="form-group">
-            <label for="clientName">Nombre completo</label>
-            <input type="text" id="clientName" />
-          </div>
-          <div class="form-group">
-            <label for="clientCedula">Cédula</label>
-            <input type="text" id="clientCedula" />
-            <p id="cedulaError" class="error-message"></p>
-          </div>
-        </div>
-        <!-- Aseguradora y cobertura se muestran en la misma fila para ahorrar espacio -->
-        <div class="inline-fields">
-          <div class="form-group">
-            <label for="aseguradoraSelect">Aseguradora</label>
-            <select id="aseguradoraSelect"></select>
-          </div>
-          <div class="form-group" id="coverageGroup" style="display:none;">
-            <!-- Input de cobertura: por defecto 80 %. El asesor puede modificarlo para recalcular el copago. -->
-            <label for="coverageInput">Cobertura referencial (%)</label>
-            <input type="number" id="coverageInput" min="0" max="100" step="1" value="80" />
-          </div>
         </div>
       </div>
       <div class="footer">

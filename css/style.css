@@ -224,6 +224,24 @@ a:hover {
   text-align: right;
 }
 
+.items-table td .copago-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.items-table td .copago-controls .btn {
+  padding: 4px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.items-table td .copago-controls .btn.no-coverage-active {
+  background-color: #ffb74d;
+  border-color: #ffb74d;
+  color: #1b1b1b;
+}
+
 .items-table tr.manual-no-coverage td {
   background-color: #fff4e5;
 }
