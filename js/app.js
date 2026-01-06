@@ -106,7 +106,11 @@ function getUsers() {
   const stored = localStorage.getItem('users');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (isValidUsers(parsed)) {
+        return parsed;
+      }
+      console.warn('Usuarios almacenados con formato inválido, se reinician a valores por defecto.');
     } catch (e) {
       console.error('No se pudo parsear usuarios de localStorage', e);
       localStorage.removeItem('users');
@@ -115,6 +119,24 @@ function getUsers() {
   // Inicializar con los usuarios por defecto y guardarlos
   localStorage.setItem('users', JSON.stringify(DEFAULT_USERS));
   return { ...DEFAULT_USERS };
+}
+
+/**
+ * Verifica que la estructura de usuarios sea válida.
+ * @param {Object} users
+ * @returns {boolean}
+ */
+function isValidUsers(users) {
+  if (!users || typeof users !== 'object' || Array.isArray(users)) {
+    return false;
+  }
+  return Object.values(users).every(
+    (user) =>
+      user &&
+      typeof user === 'object' &&
+      typeof user.password === 'string' &&
+      typeof user.role === 'string',
+  );
 }
 
 /**
