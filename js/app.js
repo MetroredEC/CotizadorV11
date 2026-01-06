@@ -82,19 +82,48 @@ function formatCurrency(value) {
 // backend seguro para producción. Si se añade o elimina un usuario desde
 // la página de administración, se actualizará localStorage.
 const DEFAULT_USERS = {
-  admin: {
-    password: 'admin123',
-    role: 'admin',
-  },
-  asesor: {
-    password: 'asesor123',
+  tsingo: {
+    password: 'Metro2025',
     role: 'asesor',
   },
   xguerra: {
-    password: 'Metrored2024',
+    password: 'Metro2025',
     role: 'asesor',
   },
+  wjacome: {
+    password: 'Metro2025',
+    role: 'asesor',
+  },
+  farias: {
+    password: 'Metro2025',
+    role: 'asesor',
+  },
+  asesor: {
+    password: 'Metro2025',
+    role: 'asesor',
+  },
+  admin: {
+    password: 'Metro2025',
+    role: 'admin',
+  },
 };
+
+function usersMatchDefaults(users) {
+  const defaultKeys = Object.keys(DEFAULT_USERS).sort();
+  const userKeys = Object.keys(users).sort();
+  if (defaultKeys.length !== userKeys.length) {
+    return false;
+  }
+  return defaultKeys.every((key, index) => {
+    if (key !== userKeys[index]) {
+      return false;
+    }
+    return (
+      users[key].password === DEFAULT_USERS[key].password &&
+      users[key].role === DEFAULT_USERS[key].role
+    );
+  });
+}
 
 /**
  * Devuelve los usuarios guardados en localStorage o crea los usuarios por
@@ -107,10 +136,10 @@ function getUsers() {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      if (isValidUsers(parsed)) {
+      if (isValidUsers(parsed) && usersMatchDefaults(parsed)) {
         return parsed;
       }
-      console.warn('Usuarios almacenados con formato inválido, se reinician a valores por defecto.');
+      console.warn('Usuarios almacenados fuera de la configuración fija, se reinician a valores por defecto.');
     } catch (e) {
       console.error('No se pudo parsear usuarios de localStorage', e);
       localStorage.removeItem('users');
