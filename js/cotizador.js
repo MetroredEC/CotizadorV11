@@ -87,6 +87,17 @@ function initCotizador() {
     return normalized.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   };
 
+  const isDollarCopagoItem = (exam) => {
+    if (!exam) {
+      return false;
+    }
+    const group = (exam.grupo || '').toLowerCase();
+    const desc = (exam.descripcion || '').toLowerCase();
+    const isConsultation = group.includes('consultas') || desc.includes('consulta');
+    const isPhysioSession = desc.includes('fisioterapia');
+    return isConsultation || isPhysioSession;
+  };
+
   function getStoredExceptions() {
     try {
       const raw = localStorage.getItem('exceptions');
@@ -167,14 +178,18 @@ function initCotizador() {
           const pvp = parseFloat(exam.precio) || 0;
           let pva = null;
           const currentAseg = aseguradoraSelect.value;
-          if (currentAseg && currentAseg !== 'Particular' && exam.tarifas) {
+          const hasSelectedInsurer = currentAseg && currentAseg !== 'Particular';
+          if (hasSelectedInsurer && exam.tarifas) {
             const tarifa = exam.tarifas[currentAseg];
             if (tarifa != null && !isNaN(tarifa)) {
               pva = parseFloat(tarifa);
             }
           }
+          if (hasSelectedInsurer && (pva == null || isNaN(pva))) {
+            pva = pvp;
+          }
           const li = document.createElement('li');
-          li.innerHTML = `<strong>${exam.codigo}</strong> – ${exam.descripcion}<br/><small>PVP: ${formatCurrency(pvp)} ${pva != null ? '– PVA: ' + formatCurrency(pva) : ''}</small>`;
+          li.innerHTML = `<strong>${exam.codigo}</strong> – ${exam.descripcion}<br/><small>PVP: ${formatCurrency(pvp)} ${hasSelectedInsurer ? '– PVA: ' + formatCurrency(pva) : ''}</small>`;
           li.style.lineHeight = '1.2';
           li.addEventListener('click', () => {
             addExamToCart(exam);
@@ -210,6 +225,7 @@ function initCotizador() {
         priceUnit: price,
         cantidad: 1,
         copagoAmountOverride: null,
+        coveragePercentOverride: null,
         manualCopagoRemoved: false,
         copagoAmount: 0,
         copagoEffectiveRemoved: false,
@@ -240,8 +256,19 @@ function initCotizador() {
     });
   }
 
-  function resolveCopagoState(item, context, basePvaUnit, qty, isException) {
-    const defaultPercent = context.hasInsurer ? roundPercent(context.copagoPercent) : 0;
+  function resolveCopagoState(
+    item,
+    context,
+    basePvaUnit,
+    qty,
+    isException,
+    options = {},
+  ) {
+    const resolvedCopagoPercent = isFinite(options.copagoPercent)
+      ? options.copagoPercent
+      : context.copagoPercent;
+    const defaultPercent = context.hasInsurer ? roundPercent(resolvedCopagoPercent) : 0;
+    const allowAmountOverride = options.allowAmountOverride !== false;
     let removed = false;
     const defaultCopagoAmount = roundCurrency(basePvaUnit * qty * (defaultPercent / 100));
     let copagoAmount = defaultCopagoAmount;
@@ -253,6 +280,7 @@ function initCotizador() {
     } else if (item.manualCopagoRemoved) {
       removed = true;
     } else if (
+      allowAmountOverride &&
       typeof item.copagoAmountOverride === 'number' &&
       isFinite(item.copagoAmountOverride)
     ) {
@@ -287,22 +315,45 @@ function initCotizador() {
       const tr = document.createElement('tr');
       tr.classList.toggle('manual-no-coverage', hasInsurer && !!item.manualCopagoRemoved);
       const exam = appState.examenes.find((e) => e.codigo === item.codigo);
-      let pva = null;
+      const pvpUnit = exam && !isNaN(parseFloat(exam.precio))
+        ? parseFloat(exam.precio)
+        : item.priceUnit;
+      let pvaUnit = null;
       const currentAseg = aseguradoraSelect.value;
       if (currentAseg && currentAseg !== 'Particular' && exam && exam.tarifas) {
         const tarifa = exam.tarifas[currentAseg];
         if (tarifa != null && !isNaN(tarifa)) {
-          pva = parseFloat(tarifa);
+          pvaUnit = parseFloat(tarifa);
         }
       }
+      if (hasInsurer && (pvaUnit == null || isNaN(pvaUnit))) {
+        pvaUnit = pvpUnit;
+      }
+      const usesDollarCopago = isDollarCopagoItem(exam);
       const isException = hasInsurer && exceptions.includes(item.codigo);
-      const basePvaUnit = !isNaN(pva) && pva != null ? pva : item.priceUnit;
+      const resolveEffectiveCopagoPercent = () => {
+        if (!hasInsurer) {
+          return 0;
+        }
+        const coveragePercent = !usesDollarCopago &&
+          typeof item.coveragePercentOverride === 'number' &&
+          isFinite(item.coveragePercentOverride)
+          ? roundPercent(item.coveragePercentOverride)
+          : coverageContext.coverage;
+        return roundPercent(100 - coveragePercent);
+      };
+      const effectiveCopagoPercent = resolveEffectiveCopagoPercent();
+      const basePvaUnit = hasInsurer && pvaUnit != null ? pvaUnit : item.priceUnit;
       const copagoState = resolveCopagoState(
         item,
         coverageContext,
         basePvaUnit,
         item.cantidad,
-        isException
+        isException,
+        {
+          copagoPercent: effectiveCopagoPercent,
+          allowAmountOverride: usesDollarCopago,
+        },
       );
 
       const tdCode = document.createElement('td');
@@ -314,7 +365,12 @@ function initCotizador() {
       tr.appendChild(tdDesc);
 
       const tdPva = document.createElement('td');
-      tdPva.textContent = (pva != null) ? formatCurrency(pva) : '-';
+      if (hasInsurer) {
+        const displayPva = pvaUnit != null ? pvaUnit : pvpUnit;
+        tdPva.textContent = formatCurrency(displayPva);
+      } else {
+        tdPva.textContent = '-';
+      }
       tr.appendChild(tdPva);
 
       const tdCopago = document.createElement('td');
@@ -325,62 +381,120 @@ function initCotizador() {
         copagoControls.className = 'copago-controls';
         copagoInput = document.createElement('input');
         copagoInput.type = 'number';
-        copagoInput.min = '0';
-        copagoInput.step = '0.01';
         copagoInput.className = 'copago-input';
-        const defaultCopagoAmount = copagoState.defaultCopagoAmount;
-        copagoInput.placeholder = formatCurrency(defaultCopagoAmount);
-        copagoInput.title = 'Copago en dólares para esta línea';
-        if (item.manualCopagoRemoved) {
-          copagoInput.value = '';
-          copagoInput.disabled = true;
-        } else if (
-          typeof item.copagoAmountOverride === 'number' &&
-          isFinite(item.copagoAmountOverride)
-        ) {
-          copagoInput.value = formatCurrency(item.copagoAmountOverride);
-        } else {
-          copagoInput.value = formatCurrency(defaultCopagoAmount);
-        }
-        copagoInput.addEventListener('change', (e) => {
-          const rawVal = e.target.value.trim();
-          if (rawVal === '') {
-            item.copagoAmountOverride = null;
-            item.manualCopagoRemoved = false;
+        const defaultCoveragePercent = roundPercent(coverageContext.coverage);
+        const resolveCoverageValue = () => {
+          if (
+            typeof item.coveragePercentOverride === 'number' &&
+            isFinite(item.coveragePercentOverride)
+          ) {
+            return formatPercent(item.coveragePercentOverride);
+          }
+          return formatPercent(defaultCoveragePercent);
+        };
+        if (usesDollarCopago) {
+          copagoInput.min = '0';
+          copagoInput.step = '0.01';
+          const defaultCopagoAmount = copagoState.defaultCopagoAmount;
+          copagoInput.placeholder = formatCurrency(defaultCopagoAmount);
+          copagoInput.title = 'Copago en dólares para esta línea';
+          if (item.manualCopagoRemoved) {
+            copagoInput.value = '';
+            copagoInput.disabled = true;
+          } else if (
+            typeof item.copagoAmountOverride === 'number' &&
+            isFinite(item.copagoAmountOverride)
+          ) {
+            copagoInput.value = formatCurrency(item.copagoAmountOverride);
+          } else {
             copagoInput.value = formatCurrency(defaultCopagoAmount);
+          }
+          copagoInput.addEventListener('change', (e) => {
+            const rawVal = e.target.value.trim();
+            if (rawVal === '') {
+              item.copagoAmountOverride = null;
+              item.manualCopagoRemoved = false;
+              copagoInput.value = formatCurrency(defaultCopagoAmount);
+              copagoInput.disabled = false;
+              tr.classList.remove('manual-no-coverage');
+              if (noCoverageBtn) {
+                noCoverageBtn.textContent = 'Sin cobertura';
+                noCoverageBtn.classList.remove('no-coverage-active');
+              }
+              updateSummary();
+              return;
+            }
+            const parsed = parseFloat(rawVal);
+            if (isNaN(parsed) || parsed < 0) {
+              if (
+                typeof item.copagoAmountOverride === 'number' &&
+                isFinite(item.copagoAmountOverride)
+              ) {
+                copagoInput.value = formatCurrency(item.copagoAmountOverride);
+              } else {
+                copagoInput.value = formatCurrency(defaultCopagoAmount);
+              }
+              return;
+            }
+            const sanitized = roundCurrency(parsed);
+            item.manualCopagoRemoved = false;
+            item.copagoAmountOverride = sanitized;
             copagoInput.disabled = false;
+            copagoInput.value = formatCurrency(sanitized);
             tr.classList.remove('manual-no-coverage');
             if (noCoverageBtn) {
               noCoverageBtn.textContent = 'Sin cobertura';
               noCoverageBtn.classList.remove('no-coverage-active');
             }
             updateSummary();
-            return;
+          });
+        } else {
+          copagoInput.min = '0';
+          copagoInput.max = '100';
+          copagoInput.step = '0.01';
+          copagoInput.placeholder = resolveCoverageValue();
+          copagoInput.title = 'Cobertura (%) para esta línea';
+          if (item.manualCopagoRemoved) {
+            copagoInput.value = '';
+            copagoInput.disabled = true;
+          } else {
+            copagoInput.value = resolveCoverageValue();
           }
-          const parsed = parseFloat(rawVal);
-          if (isNaN(parsed) || parsed < 0) {
-            if (
-              typeof item.copagoAmountOverride === 'number' &&
-              isFinite(item.copagoAmountOverride)
-            ) {
-              copagoInput.value = formatCurrency(item.copagoAmountOverride);
-            } else {
-              copagoInput.value = formatCurrency(defaultCopagoAmount);
+          copagoInput.addEventListener('change', (e) => {
+            const rawVal = e.target.value.trim();
+            if (rawVal === '') {
+              item.coveragePercentOverride = null;
+              item.copagoAmountOverride = null;
+              item.manualCopagoRemoved = false;
+              copagoInput.value = resolveCoverageValue();
+              copagoInput.disabled = false;
+              tr.classList.remove('manual-no-coverage');
+              if (noCoverageBtn) {
+                noCoverageBtn.textContent = 'Sin cobertura';
+                noCoverageBtn.classList.remove('no-coverage-active');
+              }
+              updateSummary();
+              return;
             }
-            return;
-          }
-          const sanitized = roundCurrency(parsed);
-          item.manualCopagoRemoved = false;
-          item.copagoAmountOverride = sanitized;
-          copagoInput.disabled = false;
-          copagoInput.value = formatCurrency(sanitized);
-          tr.classList.remove('manual-no-coverage');
-          if (noCoverageBtn) {
-            noCoverageBtn.textContent = 'Sin cobertura';
-            noCoverageBtn.classList.remove('no-coverage-active');
-          }
-          updateSummary();
-        });
+            const parsed = parseFloat(rawVal);
+            if (isNaN(parsed)) {
+              copagoInput.value = resolveCoverageValue();
+              return;
+            }
+            const sanitized = roundPercent(parsed);
+            item.manualCopagoRemoved = false;
+            item.copagoAmountOverride = null;
+            item.coveragePercentOverride = sanitized;
+            copagoInput.disabled = false;
+            copagoInput.value = formatPercent(sanitized);
+            tr.classList.remove('manual-no-coverage');
+            if (noCoverageBtn) {
+              noCoverageBtn.textContent = 'Sin cobertura';
+              noCoverageBtn.classList.remove('no-coverage-active');
+            }
+            updateSummary();
+          });
+        }
         noCoverageBtn = document.createElement('button');
         noCoverageBtn.type = 'button';
         noCoverageBtn.className = 'btn';
@@ -401,7 +515,11 @@ function initCotizador() {
             noCoverageBtn.classList.add('no-coverage-active');
           } else {
             copagoInput.disabled = false;
-            copagoInput.value = formatCurrency(defaultCopagoAmount);
+            if (usesDollarCopago) {
+              copagoInput.value = formatCurrency(copagoState.defaultCopagoAmount);
+            } else {
+              copagoInput.value = resolveCoverageValue();
+            }
             tr.classList.remove('manual-no-coverage');
             noCoverageBtn.textContent = 'Sin cobertura';
             noCoverageBtn.classList.remove('no-coverage-active');
@@ -409,6 +527,12 @@ function initCotizador() {
           updateSummary();
         });
         copagoControls.appendChild(copagoInput);
+        if (!usesDollarCopago) {
+          const percentSuffix = document.createElement('span');
+          percentSuffix.className = 'percent-suffix';
+          percentSuffix.textContent = '%';
+          copagoControls.appendChild(percentSuffix);
+        }
         copagoControls.appendChild(noCoverageBtn);
         tdCopago.appendChild(copagoControls);
       } else if (hasInsurer) {
@@ -435,16 +559,25 @@ function initCotizador() {
         }
         item.cantidad = val;
         if (copagoInput && !item.manualCopagoRemoved) {
-          if (
-            typeof item.copagoAmountOverride === 'number' &&
-            isFinite(item.copagoAmountOverride)
+          if (usesDollarCopago) {
+            if (
+              typeof item.copagoAmountOverride === 'number' &&
+              isFinite(item.copagoAmountOverride)
+            ) {
+              copagoInput.value = formatCurrency(item.copagoAmountOverride);
+            } else {
+              const defaultCopagoAmount = roundCurrency(
+                basePvaUnit * item.cantidad * (resolveEffectiveCopagoPercent() / 100),
+              );
+              copagoInput.value = formatCurrency(defaultCopagoAmount);
+            }
+          } else if (
+            typeof item.coveragePercentOverride === 'number' &&
+            isFinite(item.coveragePercentOverride)
           ) {
-            copagoInput.value = formatCurrency(item.copagoAmountOverride);
+            copagoInput.value = formatPercent(item.coveragePercentOverride);
           } else {
-            const defaultCopagoAmount = roundCurrency(
-              basePvaUnit * item.cantidad * (roundPercent(copagoPercent) / 100)
-            );
-            copagoInput.value = formatCurrency(defaultCopagoAmount);
+            copagoInput.value = formatPercent(roundPercent(coverageContext.coverage));
           }
         }
         refreshTotals();
@@ -496,19 +629,36 @@ function initCotizador() {
           pvaUnit = parseFloat(tarifa);
         }
       }
-      if (isNaN(pvaUnit)) {
+      if (hasInsurer && (isNaN(pvaUnit) || pvaUnit == null)) {
+        pvaUnit = pvpUnit;
+      } else if (isNaN(pvaUnit)) {
         pvaUnit = item.priceUnit;
       }
       subtotalPva += pvaUnit * quantity;
 
       const baseTotal = pvaUnit * quantity;
+      const usesDollarCopago = isDollarCopagoItem(exam);
+      const effectiveCopagoPercent = hasInsurer
+        ? roundPercent(
+            100 -
+              (!usesDollarCopago &&
+              typeof item.coveragePercentOverride === 'number' &&
+              isFinite(item.coveragePercentOverride)
+                ? roundPercent(item.coveragePercentOverride)
+                : coverage),
+          )
+        : 0;
       const isException = hasInsurer && exceptions.includes(item.codigo);
       const state = resolveCopagoState(
         item,
         { hasInsurer, copagoPercent },
         pvaUnit,
         quantity,
-        isException
+        isException,
+        {
+          copagoPercent: effectiveCopagoPercent,
+          allowAmountOverride: usesDollarCopago,
+        },
       );
 
       if (!hasInsurer || state.removed) {
@@ -897,12 +1047,18 @@ function initCotizador() {
         const item = cart[filaIndex];
         // Encontrar examen original para precios
         const exam = appState.examenes.find((e) => e.codigo === item.codigo);
+        const pvpUnit = exam && !isNaN(parseFloat(exam.precio))
+          ? parseFloat(exam.precio)
+          : item.priceUnit;
         let pva = '';
         if (aseguradora !== 'Particular') {
           const val = exam && exam.tarifas ? exam.tarifas[aseguradora] : null;
           if (val != null && !isNaN(val)) {
             pva = parseFloat(val);
           }
+        }
+        if (aseguradora !== 'Particular' && (pva === '' || isNaN(pva))) {
+          pva = pvpUnit;
         }
         // Truncar descripción a una línea con puntos suspensivos para evitar salto al header
         const desc = ellipsis(item.descripcion, 55);

@@ -37,21 +37,9 @@
           <button id="logoutBtn" class="btn" style="margin-left: 10px;">Salir</button>
         </div>
       </div>
-      <!-- Información del cliente y aseguradora -->
+      <!-- Aseguradora y cobertura -->
       <div class="section">
-        <h2>Información del cliente</h2>
-        <div class="client-row">
-          <div class="form-group">
-            <label for="clientName">Nombre completo</label>
-            <input type="text" id="clientName" />
-          </div>
-          <div class="form-group">
-            <label for="clientCedula">Cédula</label>
-            <input type="text" id="clientCedula" />
-            <p id="cedulaError" class="error-message"></p>
-          </div>
-        </div>
-        <!-- Aseguradora y cobertura se muestran en la misma fila para ahorrar espacio -->
+        <h2>Aseguradora y cobertura</h2>
         <div class="inline-fields">
           <div class="form-group">
             <label for="aseguradoraSelect">Aseguradora</label>
@@ -86,7 +74,7 @@
                 <th>Código</th>
                 <th>Descripción</th>
                 <th>PVA</th>
-                <th>Copago ($)</th>
+                <th>Copago / Cobertura</th>
                 <th>Cant.</th>
                 <th>Total</th>
                 <th></th>
@@ -126,6 +114,21 @@
         <div style="margin-top: 10px;">
           <button id="generatePdf" class="btn">Generar PDF</button>
           <p id="generateError" class="error-message"></p>
+        </div>
+      </div>
+      <!-- Información del cliente -->
+      <div class="section">
+        <h2>Información del cliente (opcional)</h2>
+        <div class="client-row">
+          <div class="form-group">
+            <label for="clientName">Nombre completo</label>
+            <input type="text" id="clientName" />
+          </div>
+          <div class="form-group">
+            <label for="clientCedula">Cédula</label>
+            <input type="text" id="clientCedula" />
+            <p id="cedulaError" class="error-message"></p>
+          </div>
         </div>
       </div>
       <div class="footer">
