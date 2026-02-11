@@ -11,12 +11,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Icono de pestaña -->
-    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link rel="icon" type="image/svg+xml" id="appFavicon" />
+    <script src="js/assets.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        if (window.METRORED_ASSETS) {
+          const faviconLink = document.getElementById('appFavicon');
+          if (faviconLink && window.METRORED_ASSETS.favicon) {
+            faviconLink.href = window.METRORED_ASSETS.favicon;
+          }
+          const logoImg = document.getElementById('cotizadorLogo');
+          if (logoImg && window.METRORED_ASSETS.logo) {
+            logoImg.src = window.METRORED_ASSETS.logo;
+          }
+        }
+      });
+    </script>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <img src="images/logo.png" alt="Logo Metrored" class="logo" />
+        <img id="cotizadorLogo" src="" alt="Logo Metrored" class="logo" />
         <div class="user-actions">
           <span id="userGreeting"></span>
           <button id="logoutBtn" class="btn" style="margin-left: 10px;">Salir</button>
